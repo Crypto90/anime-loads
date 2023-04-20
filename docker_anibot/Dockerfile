@@ -24,6 +24,14 @@ RUN rm -rf /var/www/html/*
 
 RUN mv www/* /var/www/html/
 
+RUN mkdir /config/anime_cover
+
+RUN chmod 755 /config/anime_cover
+
+RUN ln -s /config/anime_cover /var/www/html/anime_cover
+
+RUN chmod 755 /var/www/html/anime_cover
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--docker" ]
