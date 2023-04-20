@@ -20,6 +20,14 @@ RUN mv anime-loads/* .
 
 RUN rm -rf anime-loads
 
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+
+RUN rm /etc/nginx/sites-enabled/default
+
+RUN mv www/nginx.conf /etc/nginx/sites-enabled/nginx.conf
+
 RUN rm -rf /var/www/html/*
 
 RUN mv www/* /var/www/html/
@@ -32,6 +40,9 @@ RUN ln -s /config/anime_cover /var/www/html/anime_cover
 
 RUN chmod 755 /var/www/html/anime_cover
 
-RUN pip install --no-cache-dir -r requirements.txt
+CMD service php7.4-fpm start && nginx -g "daemon off;"
+
+
+
 
 ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--docker" ]
