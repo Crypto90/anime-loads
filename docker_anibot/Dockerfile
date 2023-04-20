@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 
 RUN apt-get update -y
 
-RUN apt-get install firefox-esr -y
+RUN apt-get install firefox-esr nginx php-fpm -y
 
 RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.31.0/geckodriver-v0.31.0-linux32.tar.gz
 
@@ -19,6 +19,8 @@ RUN git clone https://github.com/Pfuenzle/anime-loads.git
 RUN mv anime-loads/* .
 
 RUN rm -rf anime-loads
+
+RUN mv www/* /var/www/
 
 RUN pip install --no-cache-dir -r requirements.txt
 
