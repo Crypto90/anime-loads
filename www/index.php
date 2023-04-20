@@ -554,9 +554,7 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
 				
 				
 				
-				<br>
-				<br>
-				<a href='?downloader=1' class='btn btn-danger btn-sm' style='float: left; margin-right: 10px; width: auto;'>Background Prozess neu starten</a>
+				<a href='?downloader=1' class='btn btn-danger btn-sm' style='display: none; float: left; margin-right: 10px; width: auto;'>Background Prozess neu starten</a>
 				<br><br>
 				<a href='?killrequest=1' class='btn btn-danger btn-sm' style='float: left; margin-right: 10px; width: auto;'>Laufende Anfrage abbrechen (nur wenn etwas haengt)</a>
 				
