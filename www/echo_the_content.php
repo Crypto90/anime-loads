@@ -167,7 +167,7 @@ header("Content-type: text/plain");
 				echo '	    <p class="card-text" style="color: green; font-size: 12px;"><i class="bi bi-file-earmark-check"></i> ' . ($anime->episodes > 0 ? $anime->episodes . ' episodes / ' . $maxEpisodesSaved . ' total' : 'Waiting for processing...') . '</p>';
 				echo '	    <p class="card-text" style="color: red; font-size: 12px;"><i class="bi bi-file-earmark-excel"></i> ' . (count($anime->missing) > 0 ? implode(', ', $anime->missing) . ' missing' : '-') . '</p>';
 				echo '	    <button data="?unmonitor=' . urlencode($anime->customPackage) . '" class="unmonitorBtn btn btn-danger btn-sm" style="position: absolute; left: 0; top: 179px; width: 124px; height: 26px; font-size: 10px; padding-top: 5px;">Nicht mehr beobachten</button>';
-				echo '	    <img src="' . $flag . '.png" style="position: absolute; bottom: 0; right: 0; width: 30px; opacity: 0.5;" />';
+				echo '	    <img src="/images/' . $flag . '.png" style="position: absolute; bottom: 0; right: 0; width: 30px; opacity: 0.5;" />';
 				echo '	  </div>';
 				echo '	</div>';
 				echo '  </div>';
