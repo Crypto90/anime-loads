@@ -626,7 +626,7 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     	
     	file_put_contents('/config/manualOutput.log', '');
 		
-    	$result = liveExecuteCommand('cd /usr/src/app/; python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $DRYRUN . ' > /config/manualOutput.log 2>&1 &');
+    	$result = liveExecuteCommand('cd /usr/src/app/anime-loads; python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $DRYRUN . ' > /config/manualOutput.log 2>&1 &');
 		
 		
 		if (strpos($animeTitel, 'http') !== false) {
