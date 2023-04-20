@@ -24,7 +24,7 @@ if ($_GET['action'] == "logout") {
 if (isset($_GET['unmonitor']) && $_GET['unmonitor'] != '') {
 
     	
-    	//get all your data on file
+    //get all your data on file
 	$data = file_get_contents('/config/ani.json');
 
 	// decode json to associative array
@@ -486,98 +486,98 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
 		touch('/config/docker_live_output.log');
 	}
     
-    ?>
+?>
     
     
-    <br>
-    
-    <a style="display: inline-block;" class="btn btn-danger" href="index.php?action=logout">Logout</a>
-    <br>
-    <div style="width: 1024px; margin: 30px auto; position: relative; display: inline-block;">
-    	
-    	<div style="width: 460px; border: 1px solid grey; padding: 20px; display: block; float: left;">
-			<form method="POST" action="index.php">
-				<div class="mb-3" style="text-align: left;">
-					<label for="animeTitel" class="form-label"><span style='color: orange;'>Titel</span> oder <span style='color: orange;'>URL</span> von Film oder Serie auf <span style='color: orange;'>Anime-Loads.org</span> (falls Hentai, die exakte URL angeben!):</label>
-					<input type="text" class="form-control" name="animeTitel" id="animeTitel" placeholder="Super cooler kawaii Anime <3" value="<?php echo $_POST['animeTitel'] ?>">
-			
-					<label for="languageselect" class="form-label">Sprache:</label>
-					<select class="form-select" id="languageselect" name="languageselect" aria-label="Sprache">
-						<option value="german" <?php echo (!isset($_POST['languageselect']) || $_POST['languageselect'] == 'german' ? 'selected' : '') ?>>Deutsch</option>
-						<option value="japanese" <?php echo ($_POST['languageselect'] == 'japanese' ? 'selected' : '') ?>>Japanisch</option>
-					</select>
-			
-					<label for="resolutionselect" class="form-label">Aufl&ouml;sung:</label>
-					<select class="form-select" id="resolutionselect" name="resolutionselect" aria-label="Auflˆsung">
-						<option value="1080p" <?php echo (!isset($_POST['resolutionselect']) || $_POST['resolutionselect'] == '1080p' ? 'selected' : '') ?>>1080p</option>
-						<option value="720p" <?php echo ($_POST['resolutionselect'] == '720p' ? 'selected' : '') ?>>720p</option>
-					</select> 
-			
-			
-					<label for="forceAnimeResult" class="form-label">(optional) Erzwinge Anime Ergebnis Nummer:</label>
-					<input type="text" class="form-control" name="forceAnimeResult" id="forceAnimeResult" placeholder="1" value="<?php echo $_POST['forceAnimeResult'] ?>"
-			
-					<label for="forceAnimeRelease" class="form-label">(optional) Erzwinge Release Nummer:</label>
-					<input type="text" class="form-control" name="forceAnimeRelease" id="forceAnimeRelease" placeholder="1" value="<?php echo $_POST['forceAnimeRelease'] ?>">
-			
-					<div class="form-check" style="margin-bottom: 20px;">
-					  <input class="form-check-input" type="checkbox" value="" id="ISHENTAI" name="ISHENTAI" <?php echo (isset($_POST['ISHENTAI']) ? 'checked' : '') ?>>
-					  <label class="form-check-label" for="ISHENTAI" style="margin-left: 5px;">
-						Is Hentai?
-					  </label>
-					</div>
-					
-					<div class="form-check" style="margin-bottom: 20px;">
-					  <input class="form-check-input" type="checkbox" value="" id="DRYRUN" name="DRYRUN" <?php echo (isset($_POST['DRYRUN']) ? 'checked' : '') ?>>
-					  <label class="form-check-label" for="DRYRUN" style="margin-left: 5px;">
-						DRY RUN (Prozessausgabe aber kein Download Start)
-					  </label>
-					</div>
-			
-			
-			
-		  
-					<button type="submit" value="Submit" class="btn btn-success">Anfragen</button>
-					
-					<!-- Button trigger modal -->
-					<a href="https://www.anime-loads.org/" class="btn btn-primary" target="_blank">
-					  Zeige Anime-Loads.org
-					</a>
-					<br>
-					<br>
-					<a href="https://www.anime-loads.org/all?sort=episodes&order=desc" class="btn btn-primary" target="_blank">
-					  Zeige neue Episoden
-					</a>
-					<a href="https://www.anime-loads.org/anime-movies" class="btn btn-primary" target="_blank">
-					  Zeige neue Filme
-					</a>
-					
-					
-					
-					<br>
-					<br>
-					<a href='?downloader=1' class='btn btn-danger btn-sm' style='float: left; margin-right: 10px; width: auto;'>Background Prozess neu starten</a>
-					<br><br>
-					<a href='?killrequest=1' class='btn btn-danger btn-sm' style='float: left; margin-right: 10px; width: auto;'>Laufende Anfrage abbrechen (nur wenn etwas haengt)</a>
-					
+<br>
+
+<a style="display: inline-block;" class="btn btn-danger" href="index.php?action=logout">Logout</a>
+<br>
+<div style="width: 1024px; margin: 30px auto; position: relative; display: inline-block;">
+	
+	<div style="width: 460px; border: 1px solid grey; padding: 20px; display: block; float: left;">
+		<form method="POST" action="index.php">
+			<div class="mb-3" style="text-align: left;">
+				<label for="animeTitel" class="form-label"><span style='color: orange;'>Titel</span> oder <span style='color: orange;'>URL</span> von Film oder Serie auf <span style='color: orange;'>Anime-Loads.org</span> (falls Hentai, die exakte URL angeben!):</label>
+				<input type="text" class="form-control" name="animeTitel" id="animeTitel" placeholder="Super cooler kawaii Anime <3" value="<?php echo $_POST['animeTitel'] ?>">
+		
+				<label for="languageselect" class="form-label">Sprache:</label>
+				<select class="form-select" id="languageselect" name="languageselect" aria-label="Sprache">
+					<option value="german" <?php echo (!isset($_POST['languageselect']) || $_POST['languageselect'] == 'german' ? 'selected' : '') ?>>Deutsch</option>
+					<option value="japanese" <?php echo ($_POST['languageselect'] == 'japanese' ? 'selected' : '') ?>>Japanisch</option>
+				</select>
+		
+				<label for="resolutionselect" class="form-label">Aufl&ouml;sung:</label>
+				<select class="form-select" id="resolutionselect" name="resolutionselect" aria-label="Auflˆsung">
+					<option value="1080p" <?php echo (!isset($_POST['resolutionselect']) || $_POST['resolutionselect'] == '1080p' ? 'selected' : '') ?>>1080p</option>
+					<option value="720p" <?php echo ($_POST['resolutionselect'] == '720p' ? 'selected' : '') ?>>720p</option>
+				</select> 
+		
+		
+				<label for="forceAnimeResult" class="form-label">(optional) Erzwinge Anime Ergebnis Nummer:</label>
+				<input type="text" class="form-control" name="forceAnimeResult" id="forceAnimeResult" placeholder="1" value="<?php echo $_POST['forceAnimeResult'] ?>"
+		
+				<label for="forceAnimeRelease" class="form-label">(optional) Erzwinge Release Nummer:</label>
+				<input type="text" class="form-control" name="forceAnimeRelease" id="forceAnimeRelease" placeholder="1" value="<?php echo $_POST['forceAnimeRelease'] ?>">
+		
+				<div class="form-check" style="margin-bottom: 20px;">
+				  <input class="form-check-input" type="checkbox" value="" id="ISHENTAI" name="ISHENTAI" <?php echo (isset($_POST['ISHENTAI']) ? 'checked' : '') ?>>
+				  <label class="form-check-label" for="ISHENTAI" style="margin-left: 5px;">
+					Is Hentai?
+				  </label>
 				</div>
-			</form>
-			
-			
-			
-			
-		</div>
-		<div id="downloaded-files" style="width: 558px; max-height: 606px; overflow: auto; border: 1px solid grey; padding: 20px; display: block; float: right; text-align: left;">
-			<p style="color: grey; font-size: 14px;">Downloads werden automatisch verschoben, wenn die neuste Datei &auml;lter als 10 Minuten ist und keine .rar Datei mehr existiert.<br><br>Hinzugef&uuml;gte Downloads starten innerhalb von 10 Minuten!</p>
-			<p class="form-label" style="width: 100%; display: block;">Laufende Downloads (SSD Cache):</p>
-			<div id="downloaded-files-data" style="display: block; font-size: 12px;"></div>
-			<p class="form-label" style="width: 100%; display: block;">Fertig entpackte Dateien im Downloads Ordner:</p>
-			<div id="downloaded-files-data2" style="display: block; font-size: 12px;"></div>
-		</div>
+				
+				<div class="form-check" style="margin-bottom: 20px;">
+				  <input class="form-check-input" type="checkbox" value="" id="DRYRUN" name="DRYRUN" <?php echo (isset($_POST['DRYRUN']) ? 'checked' : '') ?>>
+				  <label class="form-check-label" for="DRYRUN" style="margin-left: 5px;">
+					DRY RUN (Prozessausgabe aber kein Download Start)
+				  </label>
+				</div>
+		
+		
+		
+	  
+				<button type="submit" value="Submit" class="btn btn-success">Anfragen</button>
+				
+				<!-- Button trigger modal -->
+				<a href="https://www.anime-loads.org/" class="btn btn-primary" target="_blank">
+				  Zeige Anime-Loads.org
+				</a>
+				<br>
+				<br>
+				<a href="https://www.anime-loads.org/all?sort=episodes&order=desc" class="btn btn-primary" target="_blank">
+				  Zeige neue Episoden
+				</a>
+				<a href="https://www.anime-loads.org/anime-movies" class="btn btn-primary" target="_blank">
+				  Zeige neue Filme
+				</a>
+				
+				
+				
+				<br>
+				<br>
+				<a href='?downloader=1' class='btn btn-danger btn-sm' style='float: left; margin-right: 10px; width: auto;'>Background Prozess neu starten</a>
+				<br><br>
+				<a href='?killrequest=1' class='btn btn-danger btn-sm' style='float: left; margin-right: 10px; width: auto;'>Laufende Anfrage abbrechen (nur wenn etwas haengt)</a>
+				
+			</div>
+		</form>
+		
+		
+		
+		
 	</div>
+	<div id="downloaded-files" style="width: 558px; max-height: 606px; overflow: auto; border: 1px solid grey; padding: 20px; display: block; float: right; text-align: left;">
+		<p style="color: grey; font-size: 14px;">Downloads werden automatisch verschoben, wenn die neuste Datei &auml;lter als 10 Minuten ist und keine .rar Datei mehr existiert.<br><br>Hinzugef&uuml;gte Downloads starten innerhalb von 10 Minuten!</p>
+		<p class="form-label" style="width: 100%; display: block;">Laufende Downloads (SSD Cache):</p>
+		<div id="downloaded-files-data" style="display: block; font-size: 12px;"></div>
+		<p class="form-label" style="width: 100%; display: block;">Fertig entpackte Dateien im Downloads Ordner:</p>
+		<div id="downloaded-files-data2" style="display: block; font-size: 12px;"></div>
+	</div>
+</div>
     
     
-    <?php
+<?php
     $running = false;
     $pids=trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
 	if($pids == '') {
@@ -657,11 +657,11 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     echo '<pre id="manualOutput2"></pre>';
     $pids2=trim(shell_exec("ps ux | grep 'docker logs' | grep 'pfuenzle-anime-loads1' | grep -v grep"));
     if($pids2 == '') {
-	//log redirect process is not running, so start it once.
-	//docker logs --follow pfuenzle-anime-loads1
-	//docker logs -f --tail 10 pfuenzle-anime-loads1
-	file_put_contents('/config/docker_live_output.log', '');
-	$result = liveExecuteCommand('timeout 300 /usr/local/bin/docker logs --tail 100 --until=300s -f pfuenzle-anime-loads1 > /config/docker_live_output.log 2>&1 &');
+		//log redirect process is not running, so start it once.
+		//docker logs --follow pfuenzle-anime-loads1
+		//docker logs -f --tail 10 pfuenzle-anime-loads1
+		file_put_contents('/config/docker_live_output.log', '');
+		$result = liveExecuteCommand('timeout 300 /usr/local/bin/docker logs --tail 100 --until=300s -f pfuenzle-anime-loads1 > /config/docker_live_output.log 2>&1 &');
     }
 	
 	
@@ -671,138 +671,138 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     
     
     echo '<div id="anijson">';
-    $json=file_get_contents("/config/ani.json");
+    $json = file_get_contents("/config/ani.json");
     $data =  json_decode($json);
 
     if (count($data->anime)) {
         // Open the table
         
-	echo '<div style="display: block; width: 80%; margin: 0 auto;">';
-	$reverseIndex = count($data->anime) - 1;
-        // Cycle through the array
-        $first = true;
-        foreach (array_reverse($data->anime) as $anime) {
-        
-			$urlName = substr($anime->url, strrpos($anime->url, '/') + 1);
+		echo '<div style="display: block; width: 80%; margin: 0 auto;">';
+		$reverseIndex = count($data->anime) - 1;
+			// Cycle through the array
+			$first = true;
+			foreach (array_reverse($data->anime) as $anime) {
+		
+				$urlName = substr($anime->url, strrpos($anime->url, '/') + 1);
 			
-			$coverToDisplay = '';
-			if (!file_exists('./anime_cover/'.$urlName.'.png') || !file_exists('./anime_cover/'.$urlName.'.txt')) {
+				$coverToDisplay = '';
+				if (!file_exists('./anime_cover/'.$urlName.'.png') || !file_exists('./anime_cover/'.$urlName.'.txt')) {
 				
-				$url = 'https://www.anisearch.de/anime/index/page-1?char=all&text=' . $urlName . '&smode=1&sort=title&order=asc&view=2';
-				$options = array(
-						CURLOPT_RETURNTRANSFER => 1, 
-						CURLOPT_USERAGENT      => "Mozilla/5.0",  
-						CURLOPT_FOLLOWLOCATION => true,   
-						CURLOPT_CONNECTTIMEOUT => 5,
-						CURLOPT_TIMEOUT => 10,
-						CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0',
-						CURLOPT_REFERER => 'https://www.anisearch.de/',
-						//CURLOPT_PROXY => '213.136.89.121:80',
-				);
+					$url = 'https://www.anisearch.de/anime/index/page-1?char=all&text=' . $urlName . '&smode=1&sort=title&order=asc&view=2';
+					$options = array(
+							CURLOPT_RETURNTRANSFER => 1, 
+							CURLOPT_USERAGENT      => "Mozilla/5.0",  
+							CURLOPT_FOLLOWLOCATION => true,   
+							CURLOPT_CONNECTTIMEOUT => 5,
+							CURLOPT_TIMEOUT => 10,
+							CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0',
+							CURLOPT_REFERER => 'https://www.anisearch.de/',
+							//CURLOPT_PROXY => '213.136.89.121:80',
+					);
 			
-				$ch      = curl_init( $url );
-				curl_setopt_array( $ch, $options );
-				$htmlContent = curl_exec( $ch );
-				curl_close( $ch );
+					$ch      = curl_init( $url );
+					curl_setopt_array( $ch, $options );
+					$htmlContent = curl_exec( $ch );
+					curl_close( $ch );
 				
 								
-				$doc = new DOMDocument();
-				libxml_use_internal_errors(true);
-				$doc->loadHTML($htmlContent);
-				libxml_clear_errors();
+					$doc = new DOMDocument();
+					libxml_use_internal_errors(true);
+					$doc->loadHTML($htmlContent);
+					libxml_clear_errors();
 			
-				$detailsRedirectCoverURL = '';
-				$gotElement = $doc->getElementById("details-cover");
-				if ($gotElement != NULL) {
-					$detailsRedirectCoverURL = $doc->getElementById("details-cover")->getAttribute('src');
-				}
-				
-				$resultsCoverURL = '';
-			
-				
-				$xpath = new DomXPath($doc);
-
-				$images = [];
-				foreach ($xpath->query("//th[contains(@class, 'showpop')]") as $img) {
-					if ($img->hasAttribute('data-tooltip')) {
-						//echo '<pre>';
-						//var_dump($img->getAttribute('data-tooltip'));
-						//echo '</pre>';
-						//preg_match('/src=\"\((.*)\"\)/', $img->getAttribute('data-tooltip'), $match);
-						preg_match('/< *img[^>]*src *= *["\']?([^"\']*)/i', $img->getAttribute('data-tooltip'), $match);
-
-						if (isset($match[1])) $images[] = trim($match[1], '\'" ');
+					$detailsRedirectCoverURL = '';
+					$gotElement = $doc->getElementById("details-cover");
+					if ($gotElement != NULL) {
+						$detailsRedirectCoverURL = $doc->getElementById("details-cover")->getAttribute('src');
 					}
-				}
+				
+					$resultsCoverURL = '';
+			
+				
+					$xpath = new DomXPath($doc);
 
-			
-				if ($images[0] != NULL) {
-					$resultsCoverURL = $images[0];
-				}
-			
-				
-				if ($detailsRedirectCoverURL != '') {
-					$coverToDisplay = $detailsRedirectCoverURL;
-				} else if ($resultsCoverURL != '') {
-					$coverToDisplay = $resultsCoverURL;
-				}
-			
-			
-				//save image url to folder for local display
-				if ($coverToDisplay != '') {
-					//file_put_contents(('./anime_cover/'.$urlName.'.png'), file_get_contents($coverToDisplay));
-					// file handler
-					$file = fopen('./anime_cover/'.$urlName.'.png', 'w');
-					// cURL
-					$ch = curl_init();
-					curl_setopt($ch, CURLOPT_URL, $coverToDisplay);
-					//curl_setopt($ch, CURLOPT_PROXY, '213.136.89.121:80');
-					// set cURL options
-					curl_setopt($ch, CURLOPT_FAILONERROR, true);
-					curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-					curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-					curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0');
-					// set file handler option
-					curl_setopt($ch, CURLOPT_FILE, $file);
-					// execute cURL
-					curl_exec($ch);
-					// close cURL
-					curl_close($ch);
-					// close file
-					fclose($file);
-				}
-				
-				
-				
-				
-				
-				$maxEpisodes = '';
-				if (!file_exists('./anime_cover/'.$urlName.'.txt')) {
-					
-					
-					$episodeCounts = [];
-					foreach ($xpath->query("//span[contains(@class, 'showpop')]") as $span) {
-						if ($span->hasAttribute('data-max') && is_numeric($span->getAttribute('data-max'))) {
-							$episodeCounts[] = $span->getAttribute('data-max');
+					$images = [];
+					foreach ($xpath->query("//th[contains(@class, 'showpop')]") as $img) {
+						if ($img->hasAttribute('data-tooltip')) {
+							//echo '<pre>';
+							//var_dump($img->getAttribute('data-tooltip'));
+							//echo '</pre>';
+							//preg_match('/src=\"\((.*)\"\)/', $img->getAttribute('data-tooltip'), $match);
+							preg_match('/< *img[^>]*src *= *["\']?([^"\']*)/i', $img->getAttribute('data-tooltip'), $match);
+
+							if (isset($match[1])) $images[] = trim($match[1], '\'" ');
 						}
 					}
-					
-					if ($episodeCounts[0] != NULL) {
-						$maxEpisodes = $episodeCounts[0];
-						//write it to txt file
-						$myfile = fopen("./anime_cover/".$urlName.".txt", "w") or die("Unable to open file for writing: ./anime_cover/".$urlName.".txt");
-						fwrite($myfile, $maxEpisodes);
-						fclose($myfile);
+
+			
+					if ($images[0] != NULL) {
+						$resultsCoverURL = $images[0];
 					}
+			
+				
+					if ($detailsRedirectCoverURL != '') {
+						$coverToDisplay = $detailsRedirectCoverURL;
+					} else if ($resultsCoverURL != '') {
+						$coverToDisplay = $resultsCoverURL;
+					}
+			
+			
+					//save image url to folder for local display
+					if ($coverToDisplay != '') {
+						//file_put_contents(('./anime_cover/'.$urlName.'.png'), file_get_contents($coverToDisplay));
+						// file handler
+						$file = fopen('./anime_cover/'.$urlName.'.png', 'w');
+						// cURL
+						$ch = curl_init();
+						curl_setopt($ch, CURLOPT_URL, $coverToDisplay);
+						//curl_setopt($ch, CURLOPT_PROXY, '213.136.89.121:80');
+						// set cURL options
+						curl_setopt($ch, CURLOPT_FAILONERROR, true);
+						curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+						curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+						curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0');
+						// set file handler option
+						curl_setopt($ch, CURLOPT_FILE, $file);
+						// execute cURL
+						curl_exec($ch);
+						// close cURL
+						curl_close($ch);
+						// close file
+						fclose($file);
+					}
+				
+				
+				
+				
+				
+					$maxEpisodes = '';
+					if (!file_exists('./anime_cover/'.$urlName.'.txt')) {
+					
+					
+						$episodeCounts = [];
+						foreach ($xpath->query("//span[contains(@class, 'showpop')]") as $span) {
+							if ($span->hasAttribute('data-max') && is_numeric($span->getAttribute('data-max'))) {
+								$episodeCounts[] = $span->getAttribute('data-max');
+							}
+						}
+					
+						if ($episodeCounts[0] != NULL) {
+							$maxEpisodes = $episodeCounts[0];
+							//write it to txt file
+							$myfile = fopen("./anime_cover/".$urlName.".txt", "w") or die("Unable to open file for writing: ./anime_cover/".$urlName.".txt");
+							fwrite($myfile, $maxEpisodes);
+							fclose($myfile);
+						}
 					
 					
 					
+					}
+				
+				
+				
+				
 				}
-				
-				
-				
-				
-			}
 			
 			
 						
@@ -812,91 +812,84 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
 			
 			
 			
-			$flag = 'germany';
-			if (strpos($anime->customPackage, 'japanese') !== false) {
-				$flag = 'japan';
+				$flag = 'germany';
+				if (strpos($anime->customPackage, 'japanese') !== false) {
+					$flag = 'japan';
+				}
+			
+				$maxEpisodesSaved = file_get_contents('./anime_cover/'.$urlName.'.txt');
+			
+			
+				$completedGreenBGStyle = '';
+			
+				if ((strpos($anime->customPackage, 'movie') !== false && $anime->episodes == 1 && count($anime->missing) == 0) || ($anime->episodes == $maxEpisodesSaved && count($anime->missing) == 0)) {
+					$completedGreenBGStyle = 'background-color: rgb(15, 70, 25) !important;';
+				}
+			
+				echo '<div class="card bg-dark text-white mb-3" style="max-width: 373px; float: left; margin: 10px 10px 0 0 !important; height: 210px; width: 374px;' . $completedGreenBGStyle . '">';
+				echo '  <div class="row g-0">';
+				echo '	<div class="col-md-4">';
+				echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="/config/anime_cover/'.$urlName.'.png" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
+				echo '	</div>';
+				echo '	<div class="col-md-8">';
+				echo '	  <div class="card-body" style="text-align: left; height: 210px; overflow-y: scroll;">';
+				echo '		<h5 class="card-title" data="' . $anime->url . '" style="color: lightgrey; cursor: pointer;">' . $anime->name . '<br><span style="color: lightblue; font-size: 10px;">(ReleaseID: ' . $anime->releaseID . ')</span></h5>';
+				echo '	    <p class="card-text" style="color: orange; font-size: 12px;"><i class="bi bi-box-seam"></i> ' . $anime->customPackage . '</p>';
+				echo '	    <p class="card-text" style="color: green; font-size: 12px;"><i class="bi bi-file-earmark-check"></i> ' . ($anime->episodes > 0 ? $anime->episodes . ' episodes / ' . $maxEpisodesSaved . ' total' : 'Waiting for processing...') . '</p>';
+				echo '	    <p class="card-text" style="color: red; font-size: 12px;"><i class="bi bi-file-earmark-excel"></i> ' . (count($anime->missing) > 0 ? implode(', ', $anime->missing) . ' missing' : '-') . '</p>';
+				echo '	    <button data="?unmonitor=' . urlencode($anime->customPackage) . '" class="unmonitorBtn btn btn-danger btn-sm" style="position: absolute; left: 0; top: 179px; width: 124px; height: 26px; font-size: 10px; padding-top: 5px;">Nicht mehr beobachten</button>';
+				echo '	    <img src="/images/' . $flag . '.png" style="position: absolute; bottom: 0; right: 0; width: 30px; opacity: 0.5;" />';
+				echo '	  </div>';
+				echo '	</div>';
+				echo '  </div>';
+				echo '</div>';
+			
+			
+			
+			
+				$reverseIndex--;
 			}
-			
-			$maxEpisodesSaved = file_get_contents('./anime_cover/'.$urlName.'.txt');
-			
-			
-			$completedGreenBGStyle = '';
-			
-			if ((strpos($anime->customPackage, 'movie') !== false && $anime->episodes == 1 && count($anime->missing) == 0) || ($anime->episodes == $maxEpisodesSaved && count($anime->missing) == 0)) {
-				$completedGreenBGStyle = 'background-color: rgb(15, 70, 25) !important;';
-			}
-			
-			echo '<div class="card bg-dark text-white mb-3" style="max-width: 373px; float: left; margin: 10px 10px 0 0 !important; height: 210px; width: 374px;' . $completedGreenBGStyle . '">';
-			echo '  <div class="row g-0">';
-			echo '	<div class="col-md-4">';
-			echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="/config/anime_cover/'.$urlName.'.png" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
-			echo '	</div>';
-			echo '	<div class="col-md-8">';
-			echo '	  <div class="card-body" style="text-align: left; height: 210px; overflow-y: scroll;">';
-			echo '		<h5 class="card-title" data="' . $anime->url . '" style="color: lightgrey; cursor: pointer;">' . $anime->name . '<br><span style="color: lightblue; font-size: 10px;">(ReleaseID: ' . $anime->releaseID . ')</span></h5>';
-			echo '	    <p class="card-text" style="color: orange; font-size: 12px;"><i class="bi bi-box-seam"></i> ' . $anime->customPackage . '</p>';
-			echo '	    <p class="card-text" style="color: green; font-size: 12px;"><i class="bi bi-file-earmark-check"></i> ' . ($anime->episodes > 0 ? $anime->episodes . ' episodes / ' . $maxEpisodesSaved . ' total' : 'Waiting for processing...') . '</p>';
-			echo '	    <p class="card-text" style="color: red; font-size: 12px;"><i class="bi bi-file-earmark-excel"></i> ' . (count($anime->missing) > 0 ? implode(', ', $anime->missing) . ' missing' : '-') . '</p>';
-			echo '	    <button data="?unmonitor=' . urlencode($anime->customPackage) . '" class="unmonitorBtn btn btn-danger btn-sm" style="position: absolute; left: 0; top: 179px; width: 124px; height: 26px; font-size: 10px; padding-top: 5px;">Nicht mehr beobachten</button>';
-			echo '	    <img src="/images/' . $flag . '.png" style="position: absolute; bottom: 0; right: 0; width: 30px; opacity: 0.5;" />';
-			echo '	  </div>';
-			echo '	</div>';
-			echo '  </div>';
 			echo '</div>';
-			
-			
-			
-			
-			$reverseIndex--;
-        }
+		
+		}
 		echo '</div>';
-        
-    }
-    echo '</div>';
     
     
-    echo '<br style="clear: both;"><br>';
-    echo '<br><br>';
-    echo '<br><br>';
-    
-    echo '<h3>Logs f&uuml;r automatische Requests verarbeitung und anisearch.de "popular top 20" Parsing:</h3>';
-    echo'<h6 style="color: red;">Nicht f&uuml;r das manuelle suchen und hinzuf&uuml;gen von dieser Seite!</h6>';
-    echo '<br><br>';
-    echo'<h5>downloading_and_monitoring.txt:</h5>';
-    echo '<pre id="log1">';
-    echo file_get_contents( "/config/downloading_and_monitoring.txt" ); // get the contents, and echo it out.
-	echo '</pre>';
-    echo '<br><br>';
-    echo'<h5>no_releases_found_log.txt:</h5>';
-    echo '<pre id="log2">';
-    echo file_get_contents( "/config/no_releases_found_log.txt" ); // get the contents, and echo it out.
-	echo '</pre>';
-	echo '<br><br>';
-	echo '<br><br>';
-	echo '<br><br>';
+		echo '<br style="clear: both;"><br>';
+		echo '<br><br>';
+		echo '<br><br>';
+	
+		echo '<h3>Logs f&uuml;r automatische Requests verarbeitung und anisearch.de "popular top 20" Parsing:</h3>';
+		echo'<h6 style="color: red;">Nicht f&uuml;r das manuelle suchen und hinzuf&uuml;gen von dieser Seite!</h6>';
+		echo '<br><br>';
+		echo'<h5>downloading_and_monitoring.txt:</h5>';
+		echo '<pre id="log1">';
+		echo file_get_contents( "/config/downloading_and_monitoring.txt" ); // get the contents, and echo it out.
+		echo '</pre>';
+		echo '<br><br>';
+		echo'<h5>no_releases_found_log.txt:</h5>';
+		echo '<pre id="log2">';
+		echo file_get_contents( "/config/no_releases_found_log.txt" ); // get the contents, and echo it out.
+		echo '</pre>';
+		echo '<br><br>';
+		echo '<br><br>';
+		echo '<br><br>';
     
     
 }
 else
 {
-    ?>
+?>
+
+	<form method="POST" action="index.php" style="width: 500px; border: 1px solid #333333; padding: 20px; margin: 100px auto;">
+		Username:<br><input type="text" name="user" class="form-control"></input><br/>
+		Passwort:<br><input type="password" name="pass" class="form-control"></input><br/>
+		<input type="submit" name="submit" value="Login" class="btn btn-success" style="margin-top: 5px;"></input>
+	</form>
 	
-            <form method="POST" action="index.php" style="width: 500px; border: 1px solid #333333; padding: 20px; margin: 100px auto;">
-	            Username:<br><input type="text" name="user" class="form-control"></input><br/>
-	            Passwort:<br><input type="password" name="pass" class="form-control"></input><br/>
-	            <input type="submit" name="submit" value="Login" class="btn btn-success" style="margin-top: 5px;"></input>
-            </form>
-    <?
-    
+	
+<?php
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -909,7 +902,7 @@ else
 function liveExecuteCommand($cmd, $echoLive = false)
 {
 
-    while (@ ob_end_flush()); // end all output buffers if any
+    while (@ob_end_flush()); // end all output buffers if any
 
     $proc = popen("$cmd 2>&1 ; echo Exit status : $?", 'r');
 
@@ -923,7 +916,7 @@ function liveExecuteCommand($cmd, $echoLive = false)
         if ($echoLive) {
         	echo "$live_output";
         }
-        @ flush();
+        @flush();
     }
 
     pclose($proc);
@@ -933,9 +926,9 @@ function liveExecuteCommand($cmd, $echoLive = false)
 
     // return exit status and intended output
     return array (
-                    'exit_status'  => intval($matches[0]),
-                    'output'       => str_replace("Exit status : " . $matches[0], '', $complete_output)
-                 );
+		'exit_status'  => intval($matches[0]),
+		'output'       => str_replace("Exit status : " . $matches[0], '', $complete_output)
+	 );
 }
 
 
