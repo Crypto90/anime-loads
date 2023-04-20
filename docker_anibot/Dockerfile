@@ -20,7 +20,9 @@ RUN mv anime-loads/* .
 
 RUN rm -rf anime-loads
 
-RUN mv www/* /var/www/
+RUN rm -rf /var/www/html/*
+
+RUN mv www/* /var/www/html/
 
 RUN pip install --no-cache-dir -r requirements.txt
 
