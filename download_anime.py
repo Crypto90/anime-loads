@@ -50,7 +50,7 @@ def reader(pipe, queue):
 
 
 
-p = Popen(shlex.split("python anibot.py --configfile /config/ani.json add"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, bufsize=0)
+p = Popen(shlex.split("/usr/local/bin/python anibot.py --configfile /config/ani.json add"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, bufsize=0)
 q = queue.Queue()
 
 Thread(target=reader, args=[p.stdout, q]).start()
