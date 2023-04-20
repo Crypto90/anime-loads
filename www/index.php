@@ -25,62 +25,61 @@ if (isset($_GET['unmonitor']) && $_GET['unmonitor'] != '') {
 
     	
     	//get all your data on file
-		$data = file_get_contents('/config/ani.json');
+	$data = file_get_contents('/config/ani.json');
 
-		// decode json to associative array
-		$json_arr = json_decode($data, true);
-		
-		
-		
-		
-		//delete the data
-		foreach($json_arr['anime'] as $k=>$arr) {
-			if($arr["customPackage"] == $_GET['unmonitor']) {
-				$animeToDeleteURL = $json_arr['anime'][$k]['url'];
-				$urlNameToDelete = substr($animeToDeleteURL, strrpos($animeToDeleteURL, '/') + 1);
-				//delete cover image
-				unlink('./anime_cover/'.$urlNameToDelete.'.png');
-				
-				
-				//delete max episodes count file
-				unlink('./anime_cover/'.$urlNameToDelete.'.txt');
-				
-				//remove entry from json object
-				unset($json_arr['anime'][$k]);
-			}
-		}   
+	// decode json to associative array
+	$json_arr = json_decode($data, true);
 
-		// rebase array
-		$json_arr['anime'] = array_values($json_arr['anime']);
 
-		// encode array to json and save to file
-		file_put_contents('/config/ani.json', json_encode($json_arr));
+
+
+	//delete the data
+	foreach($json_arr['anime'] as $k=>$arr) {
+		if($arr["customPackage"] == $_GET['unmonitor']) {
+			$animeToDeleteURL = $json_arr['anime'][$k]['url'];
+			$urlNameToDelete = substr($animeToDeleteURL, strrpos($animeToDeleteURL, '/') + 1);
+			//delete cover image
+			unlink('./anime_cover/'.$urlNameToDelete.'.png');
+
+
+			//delete max episodes count file
+			unlink('./anime_cover/'.$urlNameToDelete.'.txt');
+
+			//remove entry from json object
+			unset($json_arr['anime'][$k]);
+		}
+	}   
+
+	// rebase array
+	$json_arr['anime'] = array_values($json_arr['anime']);
+
+	// encode array to json and save to file
+	file_put_contents('/config/ani.json', json_encode($json_arr));
     	die();
-		//header("Refresh:0; url=" . basename(__FILE__));
+	//header("Refresh:0; url=" . basename(__FILE__));
 		
-    }
+}
     
-    if (isset($_GET['downloader']) && $_GET['downloader'] == '1') {
-    	//stop downloader container
-    	shell_exec("docker stop pfuenzle-anime-loads1");
-    	//start downloader container
-    	shell_exec("docker start pfuenzle-anime-loads1");
-    	header("Refresh:0; url=index.php");
-		  die();
-    }
-    
-    if (isset($_GET['killrequest']) && $_GET['killrequest'] == '1') {
-    	//kill download_anime.py script.
-    	shell_exec("pkill -9 -f 'download_anime.py'");
-    	header("Refresh:0; url=index.php");
-		die();
-    }
+if (isset($_GET['downloader']) && $_GET['downloader'] == '1') {
+	//stop downloader container
+	shell_exec("docker stop pfuenzle-anime-loads1");
+	//start downloader container
+	shell_exec("docker start pfuenzle-anime-loads1");
+	header("Refresh:0; url=index.php");
+	  die();
+}
 
-
-
-
+if (isset($_GET['killrequest']) && $_GET['killrequest'] == '1') {
+	//kill download_anime.py script.
+	shell_exec("pkill -9 -f 'download_anime.py'");
+	header("Refresh:0; url=index.php");
+	die();
+}
 
 ?>
+
+
+
 <html>
 <head>
 	<title>Anime-Loads Downloader</title>
@@ -476,7 +475,7 @@ $passGET = $_GET['pass'];
 
 if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $passGET == $web_password) || ($_SESSION['user'] == $web_user && $_SESSION['pass'] == $web_password))
 {
-	  $_SESSION['user'] = $web_user;
+    $_SESSION['user'] = $web_user;
     $_SESSION['pass'] = $web_password;
     
     if (!file_exists('/config/manualOutput.log')) {
@@ -579,14 +578,6 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     
     
     <?php
-    
-    
-    
-    
-    
-    
-    
-    
     $running = false;
     $pids=trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
 	if($pids == '') {
@@ -665,22 +656,15 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     echo'<br><br><h5>Background Prozess Log:</h5>';
     echo '<pre id="manualOutput2"></pre>';
     $pids2=trim(shell_exec("ps ux | grep 'docker logs' | grep 'pfuenzle-anime-loads1' | grep -v grep"));
-	if($pids2 == '') {
-		//log redirect process is not running, so start it once.
-		//docker logs --follow pfuenzle-anime-loads1
-    	//docker logs -f --tail 10 pfuenzle-anime-loads1
-    	file_put_contents('/config/docker_live_output.log', '');
-    	$result = liveExecuteCommand('timeout 300 /usr/local/bin/docker logs --tail 100 --until=300s -f pfuenzle-anime-loads1 > /config/docker_live_output.log 2>&1 &');
-	}
+    if($pids2 == '') {
+	//log redirect process is not running, so start it once.
+	//docker logs --follow pfuenzle-anime-loads1
+	//docker logs -f --tail 10 pfuenzle-anime-loads1
+	file_put_contents('/config/docker_live_output.log', '');
+	$result = liveExecuteCommand('timeout 300 /usr/local/bin/docker logs --tail 100 --until=300s -f pfuenzle-anime-loads1 > /config/docker_live_output.log 2>&1 &');
+    }
 	
 	
-    
-    	
-    
-    
-    
-    
-    
     
     echo '<br><br>';
     echo'<h5>Gefundene, hinzugef&uuml;gte und beobachtete Titel (neuste oben) (ani.json):</h5>';
@@ -693,8 +677,8 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     if (count($data->anime)) {
         // Open the table
         
-		echo '<div style="display: block; width: 80%; margin: 0 auto;">';
-		$reverseIndex = count($data->anime) - 1;
+	echo '<div style="display: block; width: 80%; margin: 0 auto;">';
+	$reverseIndex = count($data->anime) - 1;
         // Cycle through the array
         $first = true;
         foreach (array_reverse($data->anime) as $anime) {
@@ -871,21 +855,6 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     echo '</div>';
     
     
-    
-    
-    /*
-    echo '<pre id="anijson">';
-    
-    $data = explode("\n",explode('"settings":', file_get_contents( "/volumeUSB10/usbshare/docker/anime-loads/ani.json" ))[0]);
-	foreach(array_reverse($data) as $value) { 
-	    echo $value."\n";
-	}
-    
-	echo '</pre>';
-	*/
-	
-	
-	
     echo '<br style="clear: both;"><br>';
     echo '<br><br>';
     echo '<br><br>';
