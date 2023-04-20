@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 
 RUN apt-get update -y
 
-RUN apt-get install firefox-esr nginx php php-fpm -y
+RUN apt-get install firefox-esr nginx php php-fpm php-curl php-dom -y
 
 RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.31.0/geckodriver-v0.31.0-linux32.tar.gz
 
