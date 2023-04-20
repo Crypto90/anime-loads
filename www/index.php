@@ -655,13 +655,14 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     
     echo'<br><br><h5>Background Prozess Log:</h5>';
     echo '<pre id="manualOutput2"></pre>';
-    $pids2=trim(shell_exec("ps ux | grep 'docker logs' | grep 'pfuenzle-anime-loads1' | grep -v grep"));
+    $pids2=trim(shell_exec("ps ux | grep 'strace' | grep 'docker_live_output' | grep -v grep"));
     if($pids2 == '') {
 		//log redirect process is not running, so start it once.
 		//docker logs --follow pfuenzle-anime-loads1
 		//docker logs -f --tail 10 pfuenzle-anime-loads1
 		file_put_contents('/config/docker_live_output.log', '');
-		$result = liveExecuteCommand('timeout 300 /usr/local/bin/docker logs --tail 100 --until=300s -f pfuenzle-anime-loads1 > /config/docker_live_output.log 2>&1 &');
+		//$result = liveExecuteCommand('timeout 300 /usr/local/bin/docker logs --tail 100 --until=300s -f pfuenzle-anime-loads1 > /config/docker_live_output.log 2>&1 &');
+	    	$result = liveExecuteCommand('timeout 600 strace -e write=1,2 -p 1 2>&1 | grep -o \'\"[^\"]*\"\' | sed \'s/\"//g\' > /config/docker_live_output.log 2>&1 &');
     }
 	
 	
