@@ -635,7 +635,7 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
     	
     	file_put_contents('/config/manualOutput.log', '');
 		
-    	$result = liveExecuteCommand('cd /config/; python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $DRYRUN . ' > /config/manualOutput.log 2>&1 &');
+    	$result = liveExecuteCommand('cd /usr/src/app/; python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $DRYRUN . ' > /config/manualOutput.log 2>&1 &');
 		
 		
 		if (strpos($animeTitel, 'http') !== false) {
@@ -701,14 +701,6 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
         
 			$urlName = substr($anime->url, strrpos($anime->url, '/') + 1);
 			
-			//shell_exec("docker exec -it pfuenzle-anime-loads1 docker exec -it pfuenzle-anime-loads1 cp -u /config/animeloadsGetCover.py .");
-			//$base64CoverOutput = shell_exec("/usr/local/bin/docker exec pfuenzle-anime-loads1 python animeloadsGetCover.py '" . $anime->url . "'");
-			//var_dump($base64CoverOutput);
-			//die();
-			//base64_to_jpeg($base64CoverOutput, "anime_cover/w200-" . $urlName . "-cover.jpg");
-			
-			
-			//https://www.anisearch.de/anime/index?text=Kakegurui&char=all&q=true&sort=title&order=asc
 			$coverToDisplay = '';
 			if (!file_exists('./anime_cover/'.$urlName.'.png') || !file_exists('./anime_cover/'.$urlName.'.txt')) {
 				
