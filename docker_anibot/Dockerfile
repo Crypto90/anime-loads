@@ -26,7 +26,7 @@ RUN mv www/* /var/www/html/
 
 RUN mkdir /config/anime_cover
 
-RUN chmod 755 /config/anime_cover
+RUN chmod 777 /config/anime_cover
 
 RUN ln -s /config/anime_cover /var/www/html/anime_cover
 
