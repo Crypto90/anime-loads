@@ -829,7 +829,7 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
 				echo '<div class="card bg-dark text-white mb-3" style="max-width: 373px; float: left; margin: 10px 10px 0 0 !important; height: 210px; width: 374px;' . $completedGreenBGStyle . '">';
 				echo '  <div class="row g-0">';
 				echo '	<div class="col-md-4">';
-				echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="/config/anime_cover/'.$urlName.'.png" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
+				echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="./anime_cover/'.$urlName.'.png" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
 				echo '	</div>';
 				echo '	<div class="col-md-8">';
 				echo '	  <div class="card-body" style="text-align: left; height: 210px; overflow-y: scroll;">';
