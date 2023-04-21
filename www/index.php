@@ -859,21 +859,21 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
 		echo '<br><br>';
 		echo '<br><br>';
 	
-		echo '<h3>Logs f&uuml;r automatische Requests verarbeitung und anisearch.de "popular top 20" Parsing:</h3>';
-		echo'<h6 style="color: red;">Nicht f&uuml;r das manuelle suchen und hinzuf&uuml;gen von dieser Seite!</h6>';
-		echo '<br><br>';
-		echo'<h5>downloading_and_monitoring.txt:</h5>';
-		echo '<pre id="log1">';
-		echo file_get_contents( "/config/downloading_and_monitoring.txt" ); // get the contents, and echo it out.
-		echo '</pre>';
-		echo '<br><br>';
-		echo'<h5>no_releases_found_log.txt:</h5>';
-		echo '<pre id="log2">';
-		echo file_get_contents( "/config/no_releases_found_log.txt" ); // get the contents, and echo it out.
-		echo '</pre>';
-		echo '<br><br>';
-		echo '<br><br>';
-		echo '<br><br>';
+		//echo '<h3>Logs f&uuml;r automatische Requests verarbeitung und anisearch.de "popular top 20" Parsing:</h3>';
+		//echo'<h6 style="color: red;">Nicht f&uuml;r das manuelle suchen und hinzuf&uuml;gen von dieser Seite!</h6>';
+		//echo '<br><br>';
+		//echo'<h5>downloading_and_monitoring.txt:</h5>';
+		//echo '<pre id="log1">';
+		//echo file_get_contents( "/config/downloading_and_monitoring.txt" ); // get the contents, and echo it out.
+		//echo '</pre>';
+		//echo '<br><br>';
+		//echo'<h5>no_releases_found_log.txt:</h5>';
+		//echo '<pre id="log2">';
+		//echo file_get_contents( "/config/no_releases_found_log.txt" ); // get the contents, and echo it out.
+		//echo '</pre>';
+		//echo '<br><br>';
+		//echo '<br><br>';
+		//echo '<br><br>';
     
     
 }
