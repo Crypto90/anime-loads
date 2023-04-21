@@ -46,8 +46,4 @@ ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--dock
 
 CMD mkdir /config/anime_cover && chmod 777 /config/anime_cover
 
-CMD service php7.4-fpm start && nginx -g "daemon off;"
-
-CMD ln -s /config/anime_cover /var/www/html/anime_cover
-
-CMD chmod 755 /var/www/html/anime_cover
+CMD service php7.4-fpm start && service nginx start
