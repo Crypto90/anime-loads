@@ -30,10 +30,6 @@ RUN rm -rf /var/www/html/*
 
 RUN mv www/* /var/www/html/
 
-RUN mkdir /config/anime_cover
-
-RUN chmod 777 /config/anime_cover
-
 RUN ln -s /config/anime_cover /var/www/html/anime_cover
 
 RUN chmod 755 /var/www/html/anime_cover
@@ -47,6 +43,7 @@ RUN chown www-data:www-data /var/www/.cache
 RUN chown www-data:www-data /var/www/.mozilla
 
 
+CMD mkdir /config/anime_cover && chmod 777 /config/anime_cover
 
 CMD service php7.4-fpm start && nginx -g "daemon off;"
 
