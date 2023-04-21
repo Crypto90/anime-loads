@@ -26,7 +26,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN rm /etc/nginx/sites-enabled/default
 
-RUN mv www/nginx.conf /etc/nginx/sites-enabled/nginx.conf
+RUN mv www/nginx.conf /etc/nginx/sites-available/nginx.conf
+
+RUN ln -s /etc/nginx/sites-available/nginx.conf /etc/nginx/sites-enabled/nginx.conf
 
 RUN rm -rf /var/www/html/*
 
