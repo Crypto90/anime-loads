@@ -17,7 +17,17 @@ if ($_GET['action'] == "logout") {
 	die();
 }
 
+$animeCoverFolder = "/config/anime_cover";
+if (file_exists($animeCoverFolder)) {
+	mkdir($animeCoverFolder);
+	chmod($animeCoverFolder, 0777);
+}
 
+$animeCoverWwwLink = "/var/www/html/anime_cover";
+if (file_exists($animeCoverWwwLink)) {
+	link("/config/anime_cover", $animeCoverWwwLink);
+	chmod($animeCoverWwwLink, 0777);
+}
 
 
 
