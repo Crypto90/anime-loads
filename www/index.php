@@ -545,7 +545,7 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
 				</a>
 				<br>
 				<br>
-				<a href="https://www.anime-loads.org/all?sort=episodes&order=desc" class="btn btn-primary" target="_blank">
+				<a href="https://www.anime-loads.org/all?sort=episodes&order=desc" class="btn btn-primary" target="_blank" style="margin-bottom: 10px;">
 				  Zeige neue Episoden
 				</a>
 				<a href="https://www.anime-loads.org/anime-movies" class="btn btn-primary" target="_blank">
