@@ -39,11 +39,8 @@ RUN chown www-data:www-data /var/www/.cache
 
 RUN chown www-data:www-data /var/www/.mozilla
 
-
+CMD service php7.4-fpm start && service nginx start
 
 
 ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--docker" ]
 
-CMD mkdir /config/anime_cover && chmod 777 /config/anime_cover
-
-CMD service php7.4-fpm start && service nginx start
