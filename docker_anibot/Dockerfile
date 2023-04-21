@@ -38,6 +38,16 @@ RUN ln -s /config/anime_cover /var/www/html/anime_cover
 
 RUN chmod 755 /var/www/html/anime_cover
 
+RUN mkdir /var/www/.cache
+
+RUN mkdir /var/www/.mozilla
+
+RUN chown www-data:www-data /var/www/.cache
+
+RUN chown www-data:www-data /var/www/.mozilla
+
+
+
 CMD service php7.4-fpm start && nginx -g "daemon off;"
 
 
