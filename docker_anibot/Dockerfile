@@ -24,15 +24,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 
+
 RUN mv www/nginx.conf /etc/nginx/sites-available/default
 
 RUN rm -rf /var/www/html/*
 
 RUN mv www/* /var/www/html/
-
-RUN ln -s /config/anime_cover /var/www/html/anime_cover
-
-RUN chmod 755 /var/www/html/anime_cover
 
 RUN mkdir /var/www/.cache
 
@@ -43,11 +40,14 @@ RUN chown www-data:www-data /var/www/.cache
 RUN chown www-data:www-data /var/www/.mozilla
 
 
+
+
+ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--docker" ]
+
 CMD mkdir /config/anime_cover && chmod 777 /config/anime_cover
 
 CMD service php7.4-fpm start && nginx -g "daemon off;"
 
+CMD ln -s /config/anime_cover /var/www/html/anime_cover
 
-
-
-ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--docker" ]
+CMD chmod 755 /var/www/html/anime_cover
