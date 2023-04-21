@@ -623,8 +623,9 @@ if(($user == $web_user && $pass == $web_password) || ($userGET == $web_user && $
   			$DRYRUN = ' 1';
     	
     	file_put_contents('/config/manualOutput.log', '');
-		
-    	$result = liveExecuteCommand('cd /usr/src/app/anime-loads; python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $DRYRUN . ' > /config/manualOutput.log 2>&1 &');
+	
+	// we have to set PATH=/usr/local/bin:/usr/bin:/bin:$PATH, otherwise firefox binary not found.
+    	$result = liveExecuteCommand('cd /usr/src/app/anime-loads; PATH=/usr/local/bin:/usr/bin:/bin:$PATH python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $DRYRUN . ' > /config/manualOutput.log 2>&1 &');
 		
 		
 		if (strpos($animeTitel, 'http') !== false) {
