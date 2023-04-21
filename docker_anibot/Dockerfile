@@ -39,7 +39,11 @@ RUN chown www-data:www-data /var/www/.cache
 
 RUN chown www-data:www-data /var/www/.mozilla
 
-CMD service php7.4-fpm start && service nginx start
+
+RUN echo "exit 0" > /usr/sbin/policy-rc.d
+
+CMD /etc/init.d/php7.4-fpm restart && nginx -g "daemon off;"
+
 
 
 ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--docker" ]
