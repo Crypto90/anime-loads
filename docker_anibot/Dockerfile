@@ -40,6 +40,7 @@ RUN chown www-data:www-data /var/www/.cache
 
 RUN chown www-data:www-data /var/www/.mozilla
 
+EXPOSE 80
 
 ENTRYPOINT ["entrypoint.sh" ]
 
