@@ -14,6 +14,10 @@ Volume mounts:
 /downloads -> Downloads Ordner in welchen my.jdownloader die Dateien herunterlädt.
 
 
+
+
+
+
 Originale Readme von Pfuenzle:
 
     Ein vollautomatischer Bot für Anime-Loads für automatische Downloads, mit optionalem Support für Pushbullet 
