@@ -20,10 +20,11 @@ RUN mv anime-loads/* .
 
 RUN rm -rf anime-loads
 
+RUN mv entrypoint.sh /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 RUN pip install --no-cache-dir -r requirements.txt
-
-
-
 
 RUN mv www/nginx.conf /etc/nginx/sites-available/default
 
@@ -40,11 +41,5 @@ RUN chown www-data:www-data /var/www/.cache
 RUN chown www-data:www-data /var/www/.mozilla
 
 
-RUN echo "exit 0" > /usr/sbin/policy-rc.d
-
-CMD /etc/init.d/php7.4-fpm restart && nginx -g "daemon off;"
-
-
-
-ENTRYPOINT ["python", "./anibot.py", "--configfile", "/config/ani.json", "--docker" ]
+ENTRYPOINT ["entrypoint.sh" ]
 
