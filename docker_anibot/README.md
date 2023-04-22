@@ -1,5 +1,20 @@
-# Animeloads
+# Animeloads von Pfuenzle + Webinterface und zusätzliche Skripts von Crypto90
 
+
+Lade das Dockerfile:
+https://github.com/Crypto90/anime-loads/blob/main/docker_anibot/Dockerfile
+
+Erstelle ein Image vom geladenen Dockerfile:
+docker build --no-cache -t anime-loads-web:v1 .
+
+Im Container laufender nginx Webserver läuft intern auf Port 80. Für den Container kann der Port beliebig gesetzt werden.
+
+Volume mounts:
+/config -> container config Ordner
+/downloads -> Downloads Ordner in welchen my.jdownloader die Dateien herunterlädt.
+
+
+Originale Readme von Pfuenzle:
 
     Ein vollautomatischer Bot für Anime-Loads für automatische Downloads, mit optionalem Support für Pushbullet 
     für mobile Benachrichtigungen
