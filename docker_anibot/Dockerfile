@@ -14,7 +14,7 @@ RUN rm geckodriver-v0.31.0-linux32.tar.gz
 
 RUN mv geckodriver /usr/bin/
 
-RUN git clone https://github.com/Crypto90/anime-loads.git?
+RUN git clone https://github.com/Crypto90/anime-loads.git
 
 RUN mv anime-loads/* .
 
