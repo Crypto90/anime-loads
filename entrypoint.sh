@@ -4,7 +4,7 @@
 /etc/init.d/nginx start
 
 # Start PHP-FPM
-/etc/init.d/php-fpm start
+#/etc/init.d/php7.4-fpm start
 
 # Start anibot
 python ./anibot.py --configfile /config/ani.json --docker
