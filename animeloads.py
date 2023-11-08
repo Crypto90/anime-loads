@@ -854,10 +854,10 @@ class anime():
         return self.anisearchurl
 
     #Returns either raw PNG data or base64 encoded string
-    def getCover(self):
+    def getCover(self, selfbase64=False):
         imgrequest = self.session.get(self.coverurl, stream=True)
         imgdata = imgrequest.raw.data
-        if(True):
+        if(selfbase64):
             encdata = base64.b64encode(imgdata)
             return encdata
         else:
