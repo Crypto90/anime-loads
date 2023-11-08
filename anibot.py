@@ -390,6 +390,12 @@ def addAnime():
                 "missing": [],
                 "releaseID": relchoice,
                 "episodes": curEpisodes,
+                "maxEpisodes": anime.getMaxEpisodes(),
+                "status": anime.getStatus(),
+                "year": anime.getYear(),
+                "type": anime.getType(),
+                "coverUrl": anime.getCoverURL(),
+                "anisearchUrl": anime.getAnisearchURL(),
                 "url": anime.getURL(),
                 "customPackage": customPackage,
                 "destinationFolder": destinationFolder
@@ -542,6 +548,12 @@ def addAnime():
                 "missing": [],
                 "releaseID": relchoice,
                 "episodes": curEpisodes,
+                "maxEpisodes": anime.getMaxEpisodes(),
+                "status": anime.getStatus(),
+                "year": anime.getYear(),
+                "type": anime.getType(),
+                "coverUrl": anime.getCoverURL(),
+                "anisearchUrl": anime.getAnisearchURL(),
                 "url": anime.getURL(),
                 "customPackage": customPackage
             }
@@ -556,6 +568,12 @@ def addAnime():
                     "missing": [],
                     "releaseID": relchoice,
                     "episodes": curEpisodes,
+                    "maxEpisodes": anime.getMaxEpisodes(),
+                    "status": anime.getStatus(),
+                    "year": anime.getYear(),
+                    "type": anime.getType(),
+                    "coverUrl": anime.getCoverURL(),
+                    "anisearchUrl": anime.getAnisearchURL(),
                     "url": anime.getURL(),
                     "customPackage": customPackage,
                     "destinationFolder": destinationFolder
@@ -691,6 +709,8 @@ def startbot():
 
         if(anidata != ""):
             for idx, animeentry in enumerate(anidata):
+                
+                
                 name = animeentry['name']
                 url = animeentry['url']
                 releaseID = animeentry['releaseID']
@@ -731,13 +751,28 @@ def startbot():
                         if(dl_ret == True):
                             log("[DOWNLOAD] Fehlende Episode " + str(missingEpisode) + " von " + name + " wurde zu JDownloader hinzugefügt", pb)
                             missingEpisodes[idx] = -1
-                            animeentry['missing'] = list(filter(lambda a: a != -1, missingEpisodes))
-                            print("[INFO] Update ani.json")
-                            os.makedirs(os.path.dirname(botfolder), exist_ok=True)
-                            jfile = open(botfile, "w")
-                            jfile.write(json.dumps(data, indent=4, sort_keys=True))
-                            jfile.flush()
-                            jfile.close
+                            
+                            
+                            
+                            with open(botfile, "r") as f:
+                                reloaded_data = json.load(f)
+                                reloaded_anidata = reloaded_data.get('anime', [])
+                                
+                                for reloaded_idx, reloaded_animeentry in enumerate(reloaded_anidata):
+                                    if (reloaded_animeentry['name'] == name):
+                                        reloaded_animeentry['missing'] = list(filter(lambda a: a != -1, missingEpisodes))
+                                        reloaded_animeentry['status'] = anime.getStatus()
+                                        # Update the reloaded data with the modified animeentry
+                                        reloaded_anidata[reloaded_idx] = reloaded_animeentry
+                                        reloaded_data['anime'] = reloaded_anidata
+                                        print("[INFO] Update ani.json")
+                                        os.makedirs(os.path.dirname(botfolder), exist_ok=True)
+                                        jfile = open(botfile, "w")
+                                        jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
+                                        jfile.flush()
+                                        jfile.close
+                                
+                            
                         else:
                             log("[ERROR] Fehler beim hinzufügen von Episode " + str(missingEpisode) + " von " + name + ", wird im nächsten Durchlauf erneut versucht. Ist JDownloader gestartet?", pb)
         
@@ -755,23 +790,47 @@ def startbot():
                             dl_ret = False
                         if(dl_ret == True):
                             log("[DOWNLOAD] Fehlende Episode " + str(i) + " von " + name + " wurde zu JDownloader hinzugefügt", pb)
-                            animeentry['episodes'] += 1
-                            print("[INFO] Update ani.json")
-                            os.makedirs(os.path.dirname(botfolder), exist_ok=True)
-                            jfile = open(botfile, "w")
-                            jfile.write(json.dumps(data, indent=4, sort_keys=True))
-                            jfile.flush()
-                            jfile.close
+                            
+                            with open(botfile, "r") as f:
+                                reloaded_data = json.load(f)
+                                reloaded_anidata = reloaded_data.get('anime', [])
+                                
+                            
+                                for reloaded_idx, reloaded_animeentry in enumerate(reloaded_anidata):
+                                    if (reloaded_animeentry['name'] == name):
+                                        reloaded_animeentry['episodes'] += 1
+                                        reloaded_animeentry['status'] = anime.getStatus()
+                                        # Update the reloaded data with the modified animeentry
+                                        reloaded_anidata[reloaded_idx] = reloaded_animeentry
+                                        reloaded_data['anime'] = reloaded_anidata
+                                        print("[INFO] Update ani.json")
+                                        os.makedirs(os.path.dirname(botfolder), exist_ok=True)
+                                        jfile = open(botfile, "w")
+                                        jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
+                                        jfile.flush()
+                                        jfile.close
                         else:
                             log("[ERROR] Fehler beim runterladen von Episode " + str(i) + " von " + name + ", wird im nächsten Durchlauf erneut versucht. Ist JDownloader gestartet?", pb)
                             missingEpisodes.append(i)
-                            animeentry['missing'] = missingEpisodes
-                            animeentry['episodes'] += 1
-                            os.makedirs(os.path.dirname(botfolder), exist_ok=True)
-                            jfile = open(botfile, "w")
-                            jfile.write(json.dumps(data, indent=4, sort_keys=True))
-                            jfile.flush()
-                            jfile.close
+                            
+                            with open(botfile, "r") as f:
+                                reloaded_data = json.load(f)
+                                reloaded_anidata = reloaded_data.get('anime', [])
+                                
+                                
+                                for reloaded_idx, reloaded_animeentry in enumerate(reloaded_anidata):
+                                    if (reloaded_animeentry['name'] == name):
+                                        reloaded_animeentry['missing'] = missingEpisodes
+                                        reloaded_animeentry['episodes'] += 1
+                                        reloaded_animeentry['status'] = anime.getStatus()
+                                        # Update the reloaded data with the modified animeentry
+                                        reloaded_anidata[reloaded_idx] = reloaded_animeentry
+                                        reloaded_data['anime'] = reloaded_anidata
+                                        os.makedirs(os.path.dirname(botfolder), exist_ok=True)
+                                        jfile = open(botfile, "w")
+                                        jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
+                                        jfile.flush()
+                                        jfile.close
                 else:
                     print("[INFO]" + name + " hat keine neuen Folgen verfügbar")
             print("Schlafe " + str(timedelay) + " Sekunden")
