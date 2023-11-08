@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 
 RUN apt-get update -y
 
-RUN apt-get install firefox-esr nginx php php-fpm php-curl php-dom -y
+RUN apt-get install firefox-esr nginx php php-fpm php-curl php-dom cron wget -y
 
 RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.31.0/geckodriver-v0.31.0-linux32.tar.gz
 
@@ -39,6 +39,12 @@ RUN mkdir /var/www/.mozilla
 RUN chown www-data:www-data /var/www/.cache
 
 RUN chown www-data:www-data /var/www/.mozilla
+
+# Add a cron job directly into the container
+RUN echo '* * * * * wget --output-document=/dev/null --timeout=30 "http://127.0.0.1/index.php?processqueue=1"' > /etc/cron.d/cronjob
+
+# Give execution rights to the cron job
+RUN chmod 0644 /etc/cron.d/cronjob
 
 EXPOSE 80
 
