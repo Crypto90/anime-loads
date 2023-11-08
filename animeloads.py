@@ -499,6 +499,7 @@ class anime():
         self.curEpisodes = 1337
         self.maxEpisodes = 1337
         self.coverurl = ""
+        self.anisearchurl = ""
         self.updateInfo()
 
     def updateInfo(self):
@@ -586,7 +587,9 @@ class anime():
             rel_dom = etree.HTML(detailPage.text)
 
             self.coverurl = rel_dom.xpath("//*[@id='description']/div[1]/div[1]/img/@src")[0]
-
+            self.anisearchurl = rel_dom.xpath("//a[starts-with(@href, 'https://www.anisearch.de/anime/')]/@href")[0]
+            
+            
             releases_unparsed = rel_dom.xpath("//div[@id='downloads']/div[@class='row' and 1]/div[@class='col-sm-3' and 1]/ul[@class='nav nav-pills nav-stacked' and 1]")[0]    #Get left list of releases
             releases_dom = etree.HTML(html.tostring(releases_unparsed))
             releases = releases_dom.xpath("//li")   #Get single releases from list
@@ -846,12 +849,15 @@ class anime():
 
     def getCoverURL(self):
         return self.coverurl
+    
+    def getAnisearchURL(self):
+        return self.anisearchurl
 
     #Returns either raw PNG data or base64 encoded string
-    def getCover(self, selfbase64=False):
+    def getCover(self):
         imgrequest = self.session.get(self.coverurl, stream=True)
         imgdata = imgrequest.raw.data
-        if(selfbase64):
+        if(True):
             encdata = base64.b64encode(imgdata)
             return encdata
         else:
