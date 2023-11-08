@@ -1,5 +1,8 @@
 # Animeloads download automation wrapper with webinterface
 
+Docker volume mapping:
+map a folder to container "/config".
+
 ![Webinterface screenshot 1](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-07-42.png?raw=true)
 
 ![Webinterface screenshot 2](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-07-53.png?raw=true)
@@ -7,6 +10,8 @@
 ![Webinterface screenshot 3](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-08-01.png?raw=true)
 
 ![Webinterface screenshot 4](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-08-21.png?raw=true)
+
+
 
 
 # Animeloads
