@@ -1,0 +1,23 @@
+{
+    "anime": [
+        {
+            "anisearchUrl": "https:\/\/www.anisearch.de\/anime\/18756",
+            "coverUrl": "https:\/\/www.anime-loads.org\/files\/image\/w200-shiguang-dailiren-ying-du-pian-cover.jpg",
+            "customPackage": "shiguang-dailiren-ying-du-pian japanese 1080p tv",
+            "destinationFolder": "",
+            "episodes": 6,
+            "maxEpisodes": 12,
+            "missing": [
+                6
+            ],
+            "name": "Link Click: Bridon Arc",
+            "releaseID": 2,
+            "releaseUID": "b3c3c41d2aaa97fa4580f65c29cfb6ae",
+            "status": "Laufend",
+            "type": "web",
+            "url": "https:\/\/www.anime-loads.org\/media\/shiguang-dailiren-ying-du-pian",
+            "year": 2024,
+            "paused": true
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "jd_download_dir": "/downloads",
+    "jd_extraction_dir": "/video/Extraction",
+    "main_storage_dir": "/video",
+    "plex_host": "http://192.168.1.100:32400",
+    "plex_token": "dummy_token",
+    "jd_email": "demo@example.com",
+    "base_dir": "/usr/src/app",
+    "additional_dirs": ["/volumeUSB1/Backup"]
+}

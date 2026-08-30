@@ -1,0 +1,56 @@
+{
+    "settings": {
+        "browser": 1,
+        "browser_path": "",
+        "hoster": 1,
+        "myjd_user": "demo@example.com",
+        "myjd_pw": "dummy_password",
+        "myjd_device": "JDownloader@anime-loads",
+        "pushover_token": "",
+        "pushover_user": ""
+    },
+    "anime": [
+        {
+            "url": "https://www.anime-loads.org/media/demon-slayer-kimetsu-no-yaiba-hashira-geiko-hen",
+            "name": "Demon Slayer: Kimetsu no Yaiba Hashira Geiko Hen",
+            "year": "2024",
+            "status": "Laufend",
+            "customPackage": "Demon Slayer (2024)",
+            "episodes": 6,
+            "maxEpisodes": 8,
+            "missing": [7, 8],
+            "coverUrl": "https://www.anime-loads.org/files/image/w200-demon-slayer-kimetsu-no-yaiba-hashira-geiko-hen-cover.jpg",
+            "anisearchUrl": "https://www.anisearch.de/anime/18413",
+            "releaseID": 105943,
+            "releaseUID": "dummy123"
+        },
+        {
+            "url": "https://www.anime-loads.org/media/solo-leveling",
+            "name": "Solo Leveling",
+            "year": "2024",
+            "status": "Abgeschlossen",
+            "customPackage": "Solo Leveling (2024)",
+            "episodes": 12,
+            "maxEpisodes": 12,
+            "missing": [],
+            "coverUrl": "https://www.anime-loads.org/files/image/w200-solo-leveling-cover.jpg",
+            "anisearchUrl": "https://www.anisearch.de/anime/17532",
+            "releaseID": 105822,
+            "releaseUID": "dummy456"
+        },
+        {
+            "url": "https://www.anime-loads.org/media/kaijuu-8-gou",
+            "name": "Kaiju No. 8",
+            "year": "2024",
+            "status": "Laufend",
+            "customPackage": "Kaiju No. 8 (2024)",
+            "episodes": 8,
+            "maxEpisodes": 12,
+            "missing": [9, 10, 11, 12],
+            "coverUrl": "https://www.anime-loads.org/files/image/w200-kaijuu-8-gou-cover.jpg",
+            "anisearchUrl": "https://www.anisearch.de/anime/17604",
+            "releaseID": 105955,
+            "releaseUID": "dummy789"
+        }
+    ]
+}

@@ -1,0 +1,1323 @@
+<?php
+// index.php
+error_reporting(E_ERROR | E_PARSE);
+set_time_limit(0);
+header('Access-Control-Allow-Origin: *');
+session_start();
+
+// --- 1. Actions & API Endpoints ---
+
+if (isset($_GET['action']) && $_GET['action'] == "logout") {
+	session_destroy();
+	header("Refresh:0; url=index.php");
+	die();
+}
+
+// --- JDownloader Native Proxy Endpoints ---
+if (isset($_GET['action']) && $_GET['action'] == "jd_data") {
+    header('Content-Type: application/json');
+    
+    // Execute the Python bridge script to fetch live data
+    $cmd = 'docker exec pfuenzle-anime-loads1 sh -c "cd /config && python3 jd_backend.py status 2>/dev/null"';
+    $output = shell_exec($cmd);
+    
+    if ($output && strpos($output, 'global') !== false) {
+        echo $output;
+    } else {
+        echo json_encode(["global" => ["speed" => 0, "status" => "Offline"], "packages" => []]);
+    }
+    die();
+}
+
+if (isset($_POST['action']) && in_array($_POST['action'], ['jd_start', 'jd_pause', 'jd_stop', 'jd_delete'])) {
+    $pythonCmd = "";
+    if ($_POST['action'] == 'jd_start') $pythonCmd = "start";
+    if ($_POST['action'] == 'jd_pause') $pythonCmd = "pause";
+    if ($_POST['action'] == 'jd_stop')  $pythonCmd = "stop";
+    if ($_POST['action'] == 'jd_delete') {
+        $id = escapeshellarg($_POST['id']);
+        $pythonCmd = "delete $id";
+    }
+    
+    // Execute the action command
+    if ($pythonCmd !== "") {
+        $cmd = 'docker exec pfuenzle-anime-loads1 sh -c "cd /config && python3 jd_backend.py ' . $pythonCmd . '"';
+        shell_exec($cmd);
+    }
+    die("OK");
+}
+
+// Backend Endpoint: Delete File or Folder from Cache/Unpacked
+if (isset($_POST['action']) && $_POST['action'] == "delete_file_item") {
+    $target = trim($_POST['target']);
+    // Basic security check to prevent catastrophic path traversal deletions
+    if (!empty($target) && $target !== '/' && strpos($target, '..') === false) {
+        $safeTarget = escapeshellarg($target);
+        
+        // Target typical Docker / Synology download paths using 'find' to locate the exact filename/foldername
+        $searchDirs = "/volumeUSB10/usbshare/docker/anime-loads /volume1/downloads /volume1/video";
+        
+        // Find the exact path first
+        $findCmd = "find $searchDirs -maxdepth 6 -name $safeTarget -print -quit 2>/dev/null";
+        $foundPath = trim(shell_exec($findCmd));
+        
+        if ($foundPath) {
+            // Use exec to capture both standard output and standard error to verify permissions
+            exec("rm -rf " . escapeshellarg($foundPath) . " 2>&1", $output, $return_var);
+            
+            if ($return_var === 0) {
+                echo "Deleted";
+            } else {
+                echo "Error: Permission denied or deletion failed (Code: $return_var).\n" . implode("\n", $output);
+            }
+        } else {
+            echo "Error: Item not found on disk.";
+        }
+    } else {
+        echo "Error: Invalid target specified.";
+    }
+    die();
+}
+
+if (isset($_GET['processqueue']) && $_GET['processqueue'] != '') {
+    $pids = trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
+	if ($pids == '') {
+		$file = 'queue.txt';
+		$contents = file_get_contents($file);
+		$lines = explode("\n", $contents);
+		$firstLine = trim(array_shift($lines));
+		file_put_contents($file, implode("\n", $lines));
+		
+		if ($firstLine == '') {
+			echo "empty line";
+			die();
+		}
+
+		$firstLineParameterArray = explode(";", $firstLine);
+		
+		$animeTitel = $firstLineParameterArray[0];
+    	$languageselect = $firstLineParameterArray[1];
+    	$resolutionselect = $firstLineParameterArray[2];
+    	$forceAnimeResult = $firstLineParameterArray[3];
+    	$forceAnimeRelease = $firstLineParameterArray[4];
+    	$skipEpisodes = $firstLineParameterArray[5];
+    	$DRYRUN = $firstLineParameterArray[6];
+        
+    	file_put_contents('/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log', '');
+    	$result = liveExecuteCommand('cd /volumeUSB10/usbshare/docker/anime-loads;PATH=/usr/local/bin:$PATH python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $skipEpisodes . $DRYRUN . ' > /volumeUSB10/usbshare/docker/anime-loads/manualOutput.log 2>&1 &');
+		
+		if (strpos($animeTitel, 'http') !== false) {
+    		$animeTitel = explode("/media/", $animeTitel)[1];
+    	}
+		
+		if ($result['exit_status'] === 0) {
+		   if (isset($_POST['DRYRUN'])) {
+		       file_put_contents("/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log", "DRY RUN (KEIN DOWNLOAD) Prozess gestartet [" . $animeTitel . "]... Es dauert etwa 60 Sekunden bis es weiter geht...");
+		   } else {
+		       file_put_contents("/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log", "Prozess gestartet [" . $animeTitel . "]... Es dauert etwa 60 Sekunden bis es weiter geht...");
+		   }
+		} else {
+		    file_put_contents("/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log", "Prozess konnte nicht gestartet werden!");
+		}
+	}
+	die();
+}
+
+if (isset($_GET['unmonitor']) && $_GET['unmonitor'] != '') {
+    $data = file_get_contents('/volumeUSB10/usbshare/docker/anime-loads/ani.json');
+    $json_arr = json_decode($data, true);
+    
+    foreach ($json_arr['anime'] as $k => $arr) {
+        if ($arr["customPackage"] == $_GET['unmonitor']) {
+            $animeToDeleteURL = $json_arr['anime'][$k]['url'];
+            $urlNameToDelete = substr($animeToDeleteURL, strrpos($animeToDeleteURL, '/') + 1);
+            if (file_exists('./anime_cover/'.$urlNameToDelete.'.webp')) {
+                unlink('./anime_cover/'.$urlNameToDelete.'.webp');
+            }
+            unset($json_arr['anime'][$k]);
+        }
+    }   
+
+    $json_arr['anime'] = array_values($json_arr['anime']);
+    file_put_contents('/volumeUSB10/usbshare/docker/anime-loads/ani.json', json_encode($json_arr));
+    die();
+}
+
+if (isset($_GET['downloader']) && $_GET['downloader'] == '1') {
+    shell_exec("docker stop pfuenzle-anime-loads1");
+    shell_exec("docker start pfuenzle-anime-loads1");
+    header("Refresh:0; url=index.php");
+    die();
+}
+
+if (isset($_GET['killrequest']) && $_GET['killrequest'] == '1') {
+    shell_exec("pkill -9 -f 'download_anime.py'");
+    file_put_contents("/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log", "Prozess wurde manuell beendet.");
+    header("Refresh:0; url=index.php");
+    die();
+}
+
+function liveExecuteCommand($cmd, $echoLive = false) {
+    while (@ob_end_flush());
+    $proc = popen("$cmd 2>&1 ; echo Exit status : $?", 'r');
+    $live_output = "";
+    $complete_output = "";
+
+    while (!feof($proc)) {
+        $live_output = fread($proc, 4096);
+        $complete_output = $complete_output . $live_output;
+        if ($echoLive) { echo "$live_output"; }
+        @flush();
+    }
+    pclose($proc);
+    preg_match('/[0-9]+$/', $complete_output, $matches);
+    return array (
+        'exit_status'  => intval($matches[0]),
+        'output'       => str_replace("Exit status : " . $matches[0], '', $complete_output)
+    );
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Anime-Loads Downloader</title>
+    
+	<!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- JS Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+	<style>
+        /* --- Premium Obsidian Theme --- */
+		body { 
+            background-color: #0d1117; 
+            color: #e6edf3; 
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+        
+        .panel {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Improved Text Contrasts */
+        .text-muted, .text-secondary { color: #a1aab5 !important; }
+        .text-light { color: #e6edf3 !important; }
+
+        /* Form Controls */
+        .form-control, .form-select {
+            background-color: #0d1117 !important;
+            border: 1px solid #30363d;
+            color: #e6edf3 !important;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+        }
+        
+        label { font-weight: 500; font-size: 0.9rem; color: #a1aab5; }
+        
+        /* Buttons Redesign */
+        .btn-primary { background-color: #238636; border: 1px solid rgba(240,246,252,0.1); color: #fff; }
+        .btn-primary:hover { background-color: #2ea043; border-color: rgba(240,246,252,0.1); color: #fff; }
+        
+        /* Solid Surface Buttons */
+        .btn-surface {
+            background-color: #21262d;
+            border: 1px solid rgba(240,246,252,0.1);
+            color: #e6edf3;
+            transition: all 0.2s ease;
+        }
+        .btn-surface:hover {
+            background-color: #30363d;
+            border-color: #8b949e;
+            color: #ffffff;
+        }
+
+        .btn-surface-warning {
+            background-color: #21262d;
+            border: 1px solid rgba(210, 153, 34, 0.4);
+            color: #e3b341;
+            transition: all 0.2s ease;
+        }
+        .btn-surface-warning:hover {
+            background-color: #d29922;
+            color: #000;
+        }
+
+        .btn-surface-danger {
+            background-color: #21262d;
+            border: 1px solid rgba(248, 81, 73, 0.4);
+            color: #ff7b72;
+            transition: all 0.2s ease;
+        }
+        .btn-surface-danger:hover {
+            background-color: #f85149;
+            color: #fff;
+        }
+
+        /* macOS Style Terminal Window */
+        .mac-window {
+            background: #010409;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .mac-header {
+            background: #161b22;
+            padding: 10px 12px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #30363d;
+        }
+        .mac-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .mac-close { background: #ff5f56; }
+        .mac-min { background: #ffbd2e; }
+        .mac-max { background: #27c93f; }
+        .mac-body {
+            padding: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #56d364; /* Brighter green */
+            height: 280px;
+            overflow-y: auto;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        /* --- File Items inside Cache / Unpacked / Queue / Logs --- */
+        .file-panel {
+            background-color: #010409;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px;
+            height: 220px;
+            overflow-y: auto;
+        }
+        .file-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        .file-item:last-child { margin-bottom: 0; }
+        .file-item:hover { border-color: #58a6ff; background: #1c2128; }
+        
+        .file-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #e6edf3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 12px;
+        }
+        .file-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .file-size {
+            font-size: 10px;
+            font-weight: 600;
+            color: #a1aab5;
+            background: #010409;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+        }
+        .btn-delete-file {
+            color: #ff7b72;
+            border-color: rgba(248,81,73,0.3);
+            background: rgba(248,81,73,0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            margin-left: 4px;
+        }
+        .btn-delete-file:hover { background: #f85149; color: #fff; border-color: #f85149; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+        /* --- Dynamic Library Grid for Ultrawides --- */
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+            gap: 1.5rem;
+        }
+        .anime-grid-item { width: 100%; }
+
+        /* Premium Anime Cards */
+        .premium-card {
+            display: flex;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+            height: 260px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        .premium-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+            border-color: #58a6ff;
+        }
+        .premium-card.status-completed { border-color: #2ea043; box-shadow: inset 0 0 20px rgba(46,160,67,0.05); }
+        .premium-card.status-error { border-color: #f85149; }
+        
+        .card-img-wrapper { width: 175px; flex-shrink: 0; background: #010409; position: relative; }
+        .card-img-wrapper img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: opacity 0.2s; }
+        .card-img-wrapper img:hover { opacity: 0.7; }
+        
+        .card-info { padding: 16px; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
+        .anime-title { font-size: 1.05rem; font-weight: 700; color: #e6edf3; line-height: 1.3; margin-bottom: 8px; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .anime-title:hover { color: #58a6ff; }
+        
+        .premium-badge { background: rgba(88, 166, 255, 0.1); color: #79c0ff; border: 1px solid rgba(88, 166, 255, 0.2); padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; display: inline-block; margin-bottom: 12px; align-self: flex-start; }
+        .meta-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-bottom: 8px; }
+        .meta-text { font-size: 12px; color: #a1aab5; line-height: 1.4; }
+        
+        .card-bottom-actions { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px; }
+        .unmonitor-btn { font-size: 11px; padding: 6px 14px; color: #ff7b72; background: rgba(248, 81, 73, 0.15); border: 1px solid rgba(248, 81, 73, 0.4); border-radius: 6px; transition: all 0.2s; }
+        .unmonitor-btn:hover { background: #f85149; color: #fff; }
+        .flag-icon { width: 24px; opacity: 0.7; border-radius: 2px; }
+
+        /* Toplist Slider */
+        .toplist-wrapper { position: relative; max-width: 900px; /*margin: 0 auto;*/ border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .nav-overlay-btn { position: absolute; top: 0; width: 15%; height: 100%; cursor: pointer; opacity: 0; transition: all 0.3s; z-index: 10; display: flex; align-items: center; justify-content: center; }
+        .nav-overlay-btn:hover { opacity: 1; background: rgba(255,255,255,0.1); backdrop-filter: blur(2px); }
+        .nav-overlay-left { left: 0; }
+        .nav-overlay-right { right: 0; }
+        .nav-arrow { font-size: 3rem; color: #fff; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
+	</style>
+
+	<script>
+		function endsWith(str, suffix) { return str.indexOf(suffix, str.length - suffix.length) !== -1; }
+		
+		function humanFileSize(bytes, si=false, dp=1) {
+		  const thresh = si ? 1000 : 1024;
+		  if (Math.abs(bytes) < thresh) return bytes + ' B';
+		  const units = si ? ['kB', 'MB', 'GB', 'TB'] : ['KiB', 'MiB', 'GiB', 'TiB'];
+		  let u = -1; const r = 10**dp;
+		  do { bytes /= thresh; ++u; } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+		  return bytes.toFixed(dp) + ' ' + units[u];
+		}
+		
+		function popupwindow(url, title, w, h) {
+		  var left = (screen.width/2)-(w/2);
+		  var top = (screen.height/2)-(h/2);
+		  $("body").append("<div id='dark-overlay' style='position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; opacity: 0.85; z-index: 1040;'></div>");
+		  var windoww = window.open(url, title, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+		  window.addEventListener('focus', () => {
+			 if (!windoww.closed) windoww.close();
+			 $('#dark-overlay').remove();
+		  });
+		  return windoww;
+		} 
+
+        // --- NATIVE JDOWNLOADER API CONTROLLER ---
+        const JDController = {
+            polling: null,
+            
+            init: function() {
+                this.fetchData();
+                this.polling = setInterval(() => this.fetchData(), 6000);
+            },
+            
+            fetchData: function() {
+                $.get('index.php?action=jd_data', (res) => {
+                    if (res && res.global) this.renderGlobal(res.global);
+                    if (res && res.packages) this.renderPackages(res.packages);
+                }, 'json').fail(() => {
+                    $('#jd-global-status').html('<i class="bi bi-x-circle me-1"></i>Offline').removeClass('bg-success text-dark').addClass('bg-danger text-white');
+                    $('#jd-global-speed').text('0 B/s');
+                });
+            },
+            
+            renderGlobal: function(data) {
+                $('#jd-global-speed').text(humanFileSize(data.speed) + '/s');
+                
+                let $status = $('#jd-global-status');
+                if (data.status === 'Running') {
+                    $status.html('<i class="bi bi-activity me-1"></i>Online').removeClass('bg-warning bg-danger text-white').addClass('bg-success text-dark');
+                } else {
+                    $status.html('<i class="bi bi-pause-circle me-1"></i>Paused').removeClass('bg-success bg-danger text-dark').addClass('bg-warning text-dark');
+                }
+            },
+            
+            renderPackages: function(packages) {
+                let html = '';
+                packages.forEach(p => {
+                    let percent = (p.bytesLoaded / p.bytesTotal) * 100;
+                    if (isNaN(percent)) percent = 0;
+                    
+                    let statusColor = p.finished ? 'text-success' : (p.running ? 'text-info' : 'text-warning');
+                    let barClass = p.finished ? 'bg-success' : (p.running ? 'bg-primary progress-bar-striped progress-bar-animated' : 'bg-secondary');
+                    
+                    html += `
+                    <tr style="border-bottom: 1px solid #30363d;">
+                        <td class="text-truncate fw-medium" style="max-width: 250px;" title="${p.name}">
+                            <i class="bi bi-folder-symlink me-2 text-warning"></i>${p.name}
+                        </td>
+                        <td class="${statusColor} fw-medium">${p.status}</td>
+                        <td class="align-middle">
+                            <div class="progress" style="height: 12px; background-color: #010409; border: 1px solid #30363d; border-radius: 6px;">
+                                <div class="progress-bar ${barClass}" style="width: ${percent}%"></div>
+                            </div>
+                        </td>
+                        <td class="text-muted" style="font-size: 12px;">${humanFileSize(p.bytesLoaded)} / ${humanFileSize(p.bytesTotal)}</td>
+                        <td class="fw-bold" style="color: #e6edf3;">${p.speed > 0 ? humanFileSize(p.speed)+'/s' : '-'}</td>
+                        <td class="text-secondary">${this.formatETA(p.eta)}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-surface-danger py-1 px-2" style="font-size: 12px;" onclick="JDController.deletePackage(${p.uuid})" title="Delete Package">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+                if(html === '') html = '<tr><td colspan="7" class="text-center text-muted py-4">No active downloads in JDownloader</td></tr>';
+                $('#jd-downloads-list').html(html);
+            },
+            
+            formatETA: function(seconds) {
+                if (!seconds || seconds <= 0 || !isFinite(seconds)) return '-';
+                let h = Math.floor(seconds / 3600);
+                let m = Math.floor((seconds % 3600) / 60);
+                let s = Math.floor(seconds % 60);
+                if (h > 0) return `${h}h ${m}m`;
+                return `${m}m ${s}s`;
+            },
+            
+            start: function() { $.post('index.php', { action: 'jd_start' }, () => this.fetchData()); },
+            pause: function() { $.post('index.php', { action: 'jd_pause' }, () => this.fetchData()); },
+            stop: function() { $.post('index.php', { action: 'jd_stop' }, () => this.fetchData()); },
+            deletePackage: function(id) {
+                if(confirm('Are you sure you want to delete this package from JDownloader?')) {
+                    $.post('index.php', { action: 'jd_delete', id: id }, () => this.fetchData());
+                }
+            }
+        };
+
+		var lastDataPrinted = '';
+		var lastDataPrinted2 = '';
+        var lastActiveCache = '';
+        var lastFinishedUnpacked = '';
+        var exitHandled = false;
+		
+        $(document).ready(function(){
+            
+            // Initialize JD Live Integration
+            JDController.init();
+			
+            // --- UI Interaction Handlers ---
+
+            // Unmonitor Library Item
+			$(document).on('click', '.unmonitor-btn', function(e) {
+                e.preventDefault();
+				$.get($(this).attr("data"));
+				$(this).closest(".anime-grid-item").fadeOut(300, function() { $(this).remove(); });
+			});
+			
+            // Delete Physical File / Folder (With permission & error handling)
+            $(document).on('click', '.btn-delete-file', function(e) {
+                e.preventDefault();
+                var itemName = $(this).data('item');
+                if (confirm("WARNING: Are you sure you want to permanently delete:\n\n" + itemName + "\n\nThis cannot be undone!")) {
+                    var $btn = $(this);
+                    $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>').prop('disabled', true);
+                    
+                    $.post('index.php', { action: 'delete_file_item', target: itemName }, function(response) {
+                        var res = response.trim();
+                        if (res === "Deleted") {
+                            $btn.closest('.file-item').fadeOut(300, function() { $(this).remove(); });
+                        } else {
+                            alert(res);
+                            $btn.html('<i class="bi bi-trash3"></i>').prop('disabled', false);
+                        }
+                    }).fail(function() {
+                        alert("Network or server error during deletion.");
+                        $btn.html('<i class="bi bi-trash3"></i>').prop('disabled', false);
+                    });
+                }
+            });
+
+            // Popup Anime Details
+			$(document).on('click', '.anime-title, .card-img-wrapper img', function() {
+				popupwindow($(this).attr("data") + '#description', $(this).text(), 770, 430);
+			});
+            
+            // Re-add Button Handler (For failed Log Entries)
+            $(document).on('click', '.readd-btn', function(e) {
+                e.preventDefault();
+                var titleText = $(this).data('title');
+                
+                var $input = $('input[name="animeTitel"]');
+                $input.val(titleText);
+                
+                // Visual feedback ping
+                $input.css('transition', 'none');
+                $input.css('background-color', 'rgba(227,179,65,0.3)');
+                setTimeout(() => {
+                    $input.css('transition', 'all 0.5s ease');
+                    $input.css('background-color', '');
+                }, 50);
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+			
+            // --- Background Polling Handlers ---
+
+            // Process Output Poller
+		    setInterval(function(){
+		    	$.get('/echo_the_content.php?file=1', function(data) {
+					if (lastDataPrinted != data) {
+						lastDataPrinted = data;
+						var cleanedData = data.replace(/\[0m/g, '').replace(/\[33m/g, '');
+						
+                        if (cleanedData.indexOf('Anime wurde hinzugef') != -1) {
+		        			$("#manualOutput").html('<span style="color: #56d364;">Anime wurde hinzugefügt.</span>');
+		        		} else {
+                            $("#manualOutput").html(cleanedData);
+                        }
+		        		$('#manualOutput').scrollTop($('#manualOutput')[0].scrollHeight);
+		        		
+                        // Zero-Reload Architecture
+		        		if (cleanedData.indexOf('Exit') !== -1) {
+                            if (!exitHandled) {
+                                exitHandled = true;
+                                setTimeout(function() {
+                                    $.get(window.location.href, function(htmlData) {
+                                        var newLibrary = $(htmlData).find('#anijson').html();
+                                        if (newLibrary) $('#anijson').html(newLibrary);
+                                    });
+                                }, 3000);
+                            }
+		        		} else {
+                            exitHandled = false;
+                        }
+				   }
+				});
+		    }, 500);
+		    
+            // Docker Logs Poller
+		    setInterval(function(){
+		    	$.get('/echo_the_content.php?file=10', function(data) {
+					if (lastDataPrinted2 != data) {
+						lastDataPrinted2 = data;
+						data = data.replace(/Ist JDownloader gestartet\?/g, '');
+						
+						const lines = data.split('\n');
+						const colored = lines.map(line => {
+						  if (/error/i.test(line) || /wrong/i.test(line)) return `<span style="color: #f85149;">${line}</span>`;
+						  if (/success/i.test(line) || /correct/i.test(line) || /\[download\]/i.test(line)) return `<span style="color: #56d364;">${line}</span>`;
+						  if (/\[info\]/i.test(line)) return `<span style="color: #e3b341;">${line}</span>`;
+						  return line;
+						});
+						
+						$("#manualOutput2").html(colored.join('\n'));
+						$('#manualOutput2').scrollTop($('#manualOutput2')[0].scrollHeight);
+				   	}
+				});
+		    }, 500);
+		    
+            // Helpers
+            function stripHtml(html) {
+                var tmp = document.createElement("DIV");
+                tmp.innerHTML = html;
+                return tmp.textContent || tmp.innerText || "";
+            }
+
+            function parseFileLogLine(line) {
+                var rawLine = line.replace(/<br \/>/g, '').trim();
+                if (!rawLine) return null;
+                var parts = rawLine.split(' -- ');
+                if (parts.length < 2) return null;
+                
+                var rawSize = parts[0].trim();
+                var rawName = parts.slice(1).join(' -- ').trim();
+                
+                var isFolder = rawName.endsWith(" tv") || rawName.endsWith(" movie");
+                var isArchive = rawName.indexOf('.rar') !== -1 || rawName.indexOf('.part') !== -1 || rawName.indexOf('.zip') !== -1;
+                
+                var niceSize = isFolder ? "" : humanFileSize(rawSize);
+                var iconClass = isFolder ? 'bi-folder-fill text-warning' : (isArchive ? 'bi-file-zip-fill text-danger' : 'bi-file-play-fill text-success');
+                
+                return {
+                    name: rawName,
+                    size: niceSize || 'Folder',
+                    icon: iconClass
+                };
+            }
+
+            function parseSmartLogLine(line) {
+                // If it is pure text from queue
+                var parts = line.split(';');
+                var title = parts[0] || line;
+                var badges = '';
+                
+                if (parts.length > 1) {
+                    var lang = parts[1] ? parts[1].trim() : '';
+                    var langShort = lang === 'german' ? 'DE' : (lang === 'japanese' ? 'JP' : lang);
+                    var res = parts[2] ? parts[2].trim() : '';
+                    var isDry = parts[6] ? parts[6].trim() === '1' : false;
+                    
+                    if (res) badges += `<span class="file-size">${res}</span>`;
+                    if (langShort) badges += `<span class="file-size">${langShort}</span>`;
+                    if (isDry) badges += `<span class="file-size" style="color: #e3b341; border-color: rgba(227,179,65,0.4);">DRY</span>`;
+                }
+                
+                return { title: title, badges: badges };
+            }
+
+            function fetchFileLogs() {
+                // 1. Active Cache
+                $.get('/echo_the_content.php?file=7', function(data) {
+                    if(data !== lastActiveCache) {
+                        lastActiveCache = data;
+                        var html = '';
+                        var lines = data.split('\n');
+                        for(var i=0; i<lines.length; i++) {
+                            var parsed = parseFileLogLine(lines[i]);
+                            if (!parsed) continue;
+                            html += `
+                            <div class="file-item">
+                                <div class="file-name" title="${parsed.name}">
+                                    <i class="bi ${parsed.icon} me-2 fs-6 align-middle"></i>${parsed.name}
+                                </div>
+                                <div class="file-meta">
+                                    <span class="file-size">${parsed.size}</span>
+                                    <button class="btn btn-sm btn-delete-file delete-item-btn" data-item="${parsed.name}" title="Delete Item">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </div>`;
+                        }
+                        if(html === '') html = '<div class="text-muted text-center mt-4">No active downloads</div>';
+                        $("#downloaded-files-data").html(html);
+                    }
+                });
+
+                // 2. Finished Unpacked
+                $.get('/echo_the_content.php?file=5', function(data) {
+                    if(data !== lastFinishedUnpacked) {
+                        lastFinishedUnpacked = data;
+                        var html = '';
+                        var lines = data.split('\n');
+                        for(var i=0; i<lines.length; i++) {
+                            var parsed = parseFileLogLine(lines[i]);
+                            if (!parsed) continue;
+                            html += `
+                            <div class="file-item">
+                                <div class="file-name" title="${parsed.name}">
+                                    <i class="bi ${parsed.icon} me-2 fs-6 align-middle"></i>${parsed.name}
+                                </div>
+                                <div class="file-meta">
+                                    <span class="file-size">${parsed.size}</span>
+                                    <button class="btn btn-sm btn-delete-file delete-item-btn" data-item="${parsed.name}" title="Delete Item">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </div>`;
+                        }
+                        if(html === '') html = '<div class="text-muted text-center mt-4">No unpacked files</div>';
+                        $("#downloaded-files-data2").html(html);
+                    }
+                });
+
+                // 3. Request Queue
+                $.get('/echo_the_content.php?file=77', function(data) {
+                    var lines = data.split('\n');
+                    var html = '';
+                    var count = 1;
+                    for(var i = 0; i < lines.length; i++){
+                        var line = lines[i].trim();
+                        if (line === '') continue;
+                        
+                        var parsed = parseSmartLogLine(line);
+                        if (!parsed) continue;
+
+                        var cleanText = stripHtml(parsed.title).replace(/"/g, '&quot;');
+                        html += `
+                        <div class="file-item">
+                            <div class="file-name" title="${cleanText}">
+                                <span class="text-muted me-2" style="font-size: 10px;">#${count}</span><i class="bi bi-hourglass-split me-2" style="color: #a1aab5;"></i>${parsed.title}
+                            </div>
+                            <div class="file-meta">${parsed.badges}</div>
+                        </div>`;
+                        count++;
+                    }
+                    if(html === '') html = '<div class="text-muted text-center mt-4">Queue is empty</div>';
+                    $("#request-queue-data").html(html);
+                });
+                
+                // 4. Request Log (Beautiful Card Redesign)
+                $.get('/echo_the_content.php?file=78', function(data) {
+                    var validLines = [];
+                    
+                    // Parse HTML-formatted logs or plain text fallback gracefully
+                    if (data.indexOf('<span') !== -1) {
+                        var $wrapper = $('<div>').html(data.replace(/\n/g, ' '));
+                        $wrapper.find('span').each(function() {
+                            var text = $(this).text().trim();
+                            if(text === '' || text === 'GREEN' || text === 'RED') return;
+                            
+                            var colorAttr = $(this).attr('style') || '';
+                            var isRed = colorAttr.indexOf('red') !== -1 || colorAttr.indexOf('255, 0, 0') !== -1;
+                            
+                            validLines.push({ title: text, isRed: isRed });
+                        });
+                    } else {
+                        var rawLines = data.split('\n');
+                        for(var i = 0; i < rawLines.length; i++) {
+                            if(rawLines[i].trim()) {
+                                var txt = rawLines[i].trim();
+                                var isRed = txt.toLowerCase().indexOf('error') !== -1 || txt.toLowerCase().indexOf('fail') !== -1;
+                                validLines.push({ title: txt, isRed: isRed });
+                            }
+                        }
+                    }
+
+                    // Reverse array so NEWEST logs are displayed at the TOP
+                    validLines.reverse();
+                    
+                    var html = '';
+                    for(var i = 0; i < validLines.length; i++){
+                        var item = validLines[i];
+                        if(!item) continue;
+                        
+                        var cleanText = stripHtml(item.title).replace(/"/g, '&quot;');
+                        
+                        var icon = item.isRed ? '<i class="bi bi-x-circle-fill text-danger me-2"></i>' : '<i class="bi bi-check-circle-fill text-success me-2"></i>';
+                        var badgeText = item.isRed ? 'FAILED' : 'SUCCESS';
+                        var borderColor = item.isRed ? '#f85149' : '#2ea043';
+                        var titleColor = item.isRed ? '#f85149' : '#56d364';
+                        
+                        // Re-add button exclusively for failed (red) entries
+                        var readdBtn = item.isRed ? `<button class="btn btn-sm btn-surface-warning ms-2 py-0 px-2 readd-btn" data-title="${cleanText}" title="Populate form to re-add"><i class="bi bi-arrow-clockwise"></i></button>` : '';
+
+                        html += `
+                        <div class="file-item" style="border-left: 3px solid ${borderColor}; padding-left: 10px; flex-direction: column; align-items: flex-start;">
+                            <div class="d-flex justify-content-between align-items-center w-100 mb-1">
+                                <div class="d-flex align-items-center fw-bold" style="font-size: 11px; color: ${titleColor};">
+                                    ${icon} ${badgeText}
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    ${readdBtn}
+                                </div>
+                            </div>
+                            <div class="text-light text-truncate w-100" style="font-size: 12.5px;" title="${cleanText}">
+                                ${cleanText}
+                            </div>
+                        </div>`;
+                    }
+                    if(html === '') html = '<div class="text-muted text-center mt-4"><i class="bi bi-journal-x fs-3 d-block mb-2 text-secondary"></i>No recent logs</div>';
+                    $("#request-queue-log-data").html(html);
+                });
+            }
+
+            fetchFileLogs();
+		    setInterval(fetchFileLogs, 3000);
+		});
+	</script>
+</head>
+<body>
+
+<?php
+$user = $_POST['user'] ?? '';
+$pass = $_POST['pass'] ?? '';
+$userGET = $_GET['user'] ?? '';
+$passGET = $_GET['pass'] ?? '';
+
+if (($user == "admin" && $pass == "salamibrot1") || ($userGET == "admin" && $passGET == "salamibrot1") || (isset($_SESSION['user']) && $_SESSION['user'] == "admin" && $_SESSION['pass'] == "salamibrot1")) {
+	$_SESSION['user'] = "admin";
+    $_SESSION['pass'] = "salamibrot1";
+    
+    if (!file_exists('/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log')) touch('/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log');
+	if (!file_exists('/volumeUSB10/usbshare/docker/anime-loads/docker_live_output.log')) touch('/volumeUSB10/usbshare/docker/anime-loads/docker_live_output.log');
+    
+    // Check if background process is running
+    $running = false;
+    $pids = trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
+	if ($pids != '') $running = true;
+
+    // Start Log docker process if not running
+    $pids2 = trim(shell_exec("ps ux | grep 'docker logs' | grep 'pfuenzle-anime-loads1' | grep -v grep"));
+	if ($pids2 == '') {
+    	file_put_contents('/volumeUSB10/usbshare/docker/anime-loads/docker_live_output.log', '');
+    	liveExecuteCommand('timeout 600 /usr/local/bin/docker logs --tail 100 --until=600s -f pfuenzle-anime-loads1 > /volumeUSB10/usbshare/docker/anime-loads/docker_live_output.log 2>&1 &');
+	}
+
+    // Process new form submissions
+    if (isset($_POST['animeTitel']) && $_POST['animeTitel'] != '') {
+        $animeTitel = trim($_POST['animeTitel']);
+        
+        // Wenn es eine URL ist, entferne # und ? am Ende (z.B. #description)
+        if (strpos($animeTitel, 'http') !== false) {
+            if (($pos = strpos($animeTitel, '#')) !== false) {
+                $animeTitel = substr($animeTitel, 0, $pos);
+            }
+            if (($pos = strpos($animeTitel, '?')) !== false) {
+                $animeTitel = substr($animeTitel, 0, $pos);
+            }
+        } else {
+            // Wenn es keine URL ist, ersetze Sonderzeichen durch Leerzeichen
+            $animeTitel = preg_replace('/[^A-Za-z0-9]/', ' ', $animeTitel);
+        }
+        
+        if (isset($_POST['ISHENTAI'])) { $animeTitel = 'HENTAI_' . $animeTitel; }
+    	
+    	$languageselect = $_POST['languageselect'];
+    	$resolutionselect = $_POST['resolutionselect'];
+    	$forceAnimeResult = (isset($_POST['forceAnimeResult']) && $_POST['forceAnimeResult'] != '') ? ' ' . $_POST['forceAnimeResult'] : ' 0';
+    	$forceAnimeRelease = (isset($_POST['forceAnimeRelease']) && $_POST['forceAnimeRelease'] != '') ? ' ' . $_POST['forceAnimeRelease'] : ' 0';
+    	$skipEpisodes = (isset($_POST['skipEpisodes']) && $_POST['skipEpisodes'] != '') ? ' ' . $_POST['skipEpisodes'] : ' 0';
+    	$DRYRUN = isset($_POST['DRYRUN']) ? ' 1' : ' 0';
+  		
+  		$formDataLine = "$animeTitel;$languageselect;$resolutionselect;$forceAnimeResult;$forceAnimeRelease;$skipEpisodes;$DRYRUN\n";
+
+        if ($running == false) {
+            file_put_contents('requestlog.txt', $formDataLine, FILE_APPEND);
+            file_put_contents('/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log', '');
+            $result = liveExecuteCommand('cd /volumeUSB10/usbshare/docker/anime-loads;PATH=/usr/local/bin:$PATH python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $skipEpisodes . $DRYRUN . ' > /volumeUSB10/usbshare/docker/anime-loads/manualOutput.log 2>&1 &');
+            
+            if (strpos($animeTitel, 'http') !== false) { $animeTitel = explode("/media/", $animeTitel)[1]; }
+            
+            if ($result['exit_status'] === 0) {
+                $msg = isset($_POST['DRYRUN']) ? "DRY RUN (KEIN DOWNLOAD) Prozess gestartet [$animeTitel]..." : "Prozess gestartet [$animeTitel]...";
+                file_put_contents("/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log", $msg . " Es dauert etwa 60 Sekunden bis es weiter geht...");
+            } else {
+                file_put_contents("/volumeUSB10/usbshare/docker/anime-loads/manualOutput.log", "Prozess konnte nicht gestartet werden!");
+            }
+            $running = true;
+        } else {
+            file_put_contents('queue.txt', $formDataLine, FILE_APPEND);
+		    file_put_contents('requestlog.txt', $formDataLine, FILE_APPEND);
+        }
+    }
+?>
+
+<!-- Premium Top Navbar -->
+<nav class="navbar navbar-expand-lg bg-black border-bottom border-secondary mb-4 py-2 sticky-top">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand fw-bold d-flex align-items-center" style="color: #e6edf3;" href="#">
+        <i class="bi bi-cloud-arrow-down-fill text-primary me-2 fs-4"></i> Anime-Loads
+    </a>
+    <div class="d-flex gap-2 ms-auto">
+        <a href="https://shieldserver.de" class="btn btn-surface btn-sm"><i class="bi bi-shield-check me-1"></i> Shieldserver</a>
+        <a href="folder_manager.php?lang=ger" target="_blank" class="btn btn-surface btn-sm"><i class="bi bi-folder-symlink me-1"></i> Folder Manager</a>
+        <a href="https://my.jdownloader.org/index.html?deviceId=dc69ebedb8e5d8a1bd2618dddbee1280#webinterface:downloads" target="_blank" class="btn btn-surface btn-sm"><i class="bi bi-cloud-arrow-down me-1"></i> MyJD API</a>
+        <a href='?downloader=1' class='btn btn-surface-warning btn-sm'><i class="bi bi-arrow-clockwise me-1"></i> Restart Core</a>
+        <a href='?killrequest=1' class='btn btn-surface-danger btn-sm'><i class="bi bi-stop-circle me-1"></i> Kill Active</a>
+        <a href="index.php?action=logout" class="btn btn-surface btn-sm px-3"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid px-4 pb-5">
+
+    <?php if ($running): ?>
+        <div class="alert bg-warning text-dark border-warning shadow-sm mb-4 fw-bold" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> A process is currently running! Any new requests will be queued automatically.
+        </div>
+    <?php endif; ?>
+
+    <!-- Top Section: Form & Live Logs -->
+    <div class="row g-4 mb-5">
+        
+        <!-- Left Column: Request Form -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="panel h-100">
+                <div class="p-3 border-bottom border-secondary bg-black" style="border-radius: 12px 12px 0 0;">
+                    <h6 class="mb-0 text-white fw-bold"><i class="bi bi-plus-lg me-2 text-primary"></i>New Download Request</h6>
+                </div>
+                <div class="p-4">
+                    <form method="POST" action="index.php">
+                        <div class="mb-3">
+                            <label class="mb-2">Title or Exact URL <span class="text-muted">(Anime-Loads.org)</span></label>
+                            <input type="text" class="form-control" name="animeTitel" placeholder="e.g. Super cooler kawaii Anime <3" value="<?php echo $_POST['animeTitel'] ?? '' ?>" required>
+                        </div>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label class="mb-2">Language</label>
+                                <select class="form-select" name="languageselect">
+                                    <option value="german" <?php echo (!isset($_POST['languageselect']) || $_POST['languageselect'] == 'german' ? 'selected' : '') ?>>Deutsch</option>
+                                    <option value="japanese" <?php echo (isset($_POST['languageselect']) && $_POST['languageselect'] == 'japanese' ? 'selected' : '') ?>>Japanisch</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="mb-2">Resolution</label>
+                                <select class="form-select" name="resolutionselect">
+                                    <option value="1080p" <?php echo (!isset($_POST['resolutionselect']) || $_POST['resolutionselect'] == '1080p' ? 'selected' : '') ?>>1080p</option>
+                                    <option value="720p" <?php echo (isset($_POST['resolutionselect']) && $_POST['resolutionselect'] == '720p' ? 'selected' : '') ?>>720p</option>
+                                </select> 
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-sm-4">
+                                <label class="mb-2">Force Result</label>
+                                <input type="number" class="form-control text-center" name="forceAnimeResult" placeholder="ID" value="<?php echo $_POST['forceAnimeResult'] ?? '' ?>">
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="mb-2">Force Release</label>
+                                <input type="number" class="form-control text-center" name="forceAnimeRelease" placeholder="ID" value="<?php echo $_POST['forceAnimeRelease'] ?? '' ?>">
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="mb-2">Skip EPs</label>
+                                <input type="number" class="form-control text-center" name="skipEpisodes" placeholder="0" value="<?php echo $_POST['skipEpisodes'] ?? '' ?>">
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-4 px-3 py-3" style="background: #010409; border-radius: 8px; border: 1px solid #21262d;">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="ISHENTAI" name="ISHENTAI" <?php echo (isset($_POST['ISHENTAI']) ? 'checked' : '') ?>>
+                                <label class="form-check-label text-danger fw-bold" for="ISHENTAI" style="font-size: 13px;">Is Hentai?</label>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="DRYRUN" name="DRYRUN" <?php echo (isset($_POST['DRYRUN']) ? 'checked' : '') ?>>
+                                <label class="form-check-label text-warning fw-bold" style="color: #e3b341 !important;" for="DRYRUN" style="font-size: 13px;">Dry Run</label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 mb-4"><i class="bi bi-send-fill me-2"></i>Submit Request</button>
+                        
+                        <div class="d-flex gap-2">
+                            <a href="https://www.anime-loads.org/" class="btn btn-surface btn-sm flex-fill" target="_blank"><i class="bi bi-globe me-1"></i> Anime-Loads.org</a>
+                            <a href="https://www.anime-loads.org/all?sort=episodes&order=desc" class="btn btn-surface btn-sm flex-fill" target="_blank"><i class="bi bi-collection-play me-1"></i> Latest Episodes</a>
+                            <a href="https://www.anime-loads.org/anime-movies" class="btn btn-surface btn-sm flex-fill" target="_blank"><i class="bi bi-film me-1"></i> Latest Movies</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Terminals & Logs -->
+        <div class="col-xl-8 col-lg-7 d-flex flex-column gap-4">
+            
+            <!-- Terminals -->
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label class="mb-2"><i class="bi bi-terminal me-2 text-secondary"></i>Process Output</label>
+                    <div class="mac-window">
+                        <div class="mac-header">
+                            <span class="mac-dot mac-close"></span><span class="mac-dot mac-min"></span><span class="mac-dot mac-max"></span>
+                        </div>
+                        <pre id="manualOutput" class="mac-body"></pre>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="mb-2"><i class="bi bi-cpu me-2 text-secondary"></i>Docker Background Log</label>
+                    <div class="mac-window">
+                        <div class="mac-header">
+                            <span class="mac-dot mac-close"></span><span class="mac-dot mac-min"></span><span class="mac-dot mac-max"></span>
+                        </div>
+                        <pre id="manualOutput2" class="mac-body"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Panels -->
+            <div class="row g-4">
+                <div class="col-md-3 col-sm-6">
+                    <label class="mb-2"><i class="bi bi-download me-2 text-primary"></i>Active Cache</label>
+                    <div id="downloaded-files-data" class="file-panel"></div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="mb-2"><i class="bi bi-check2-circle me-2" style="color: #56d364;"></i>Finished Unpacked</label>
+                    <div id="downloaded-files-data2" class="file-panel"></div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="mb-2"><i class="bi bi-list-ol me-2 text-warning" style="color: #e3b341 !important;"></i>Queue</label>
+                    <div id="request-queue-data" class="file-panel"></div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="mb-2"><i class="bi bi-journal-text me-2 text-secondary"></i>Log</label>
+                    <div id="request-queue-log-data" class="file-panel"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Middle Section: NATIVE JDownloader Integration -->
+    <div class="panel mb-5">
+        <div class="p-3 border-bottom border-secondary bg-black d-flex justify-content-between align-items-center" style="border-radius: 12px 12px 0 0;">
+            <h5 class="mb-0 text-white fw-bold"><i class="bi bi-cloud-arrow-down-fill me-3 text-primary"></i>JDownloader Live Remote</h5>
+            <div class="d-flex align-items-center gap-4">
+                <div class="d-flex align-items-center gap-2">
+                    <span id="jd-global-status" class="badge bg-success text-dark py-1 px-2"><i class="bi bi-activity me-1"></i>Online</span>
+                    <span class="text-light fw-bold ms-2" style="font-size: 14px;"><i class="bi bi-speedometer2 me-2 text-secondary"></i><span id="jd-global-speed">0 B/s</span></span>
+                </div>
+                <div class="d-flex gap-2 border-start border-secondary ps-4">
+                    <button class="btn btn-sm btn-surface" onclick="JDController.start()" title="Start Downloads"><i class="bi bi-play-fill text-success fs-6"></i></button>
+                    <button class="btn btn-sm btn-surface" onclick="JDController.pause()" title="Pause Downloads"><i class="bi bi-pause-fill text-warning fs-6"></i></button>
+                    <button class="btn btn-sm btn-surface" onclick="JDController.stop()" title="Stop Downloads"><i class="bi bi-stop-fill text-danger fs-6"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="p-0">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-dark table-hover mb-0" style="font-size: 13.5px; background-color: transparent;">
+                    <thead class="bg-black" style="position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th class="ps-4">Package Name</th>
+                            <th style="width: 12%">Status</th>
+                            <th style="width: 25%">Progress</th>
+                            <th style="width: 12%">Loaded</th>
+                            <th style="width: 10%">Speed</th>
+                            <th style="width: 10%">ETA</th>
+                            <th style="width: 8%" class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jd-downloads-list">
+                        <!-- Populated dynamically via NATIVE JDownloader API -->
+                        <tr><td colspan="7" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Connecting to local API...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle Section: Monitored Library -->
+    <div class="d-flex align-items-center mb-4 mt-5">
+        <h4 class="m-0 text-white fw-bold"><i class="bi bi-collection me-3 text-primary"></i>Monitored Library</h4>
+        <span class="ms-3 px-2 py-1 bg-black border border-secondary rounded" style="color: #a1aab5; font-size: 11px;">ani.json</span>
+    </div>
+    
+    <div class="anime-grid mb-5" id="anijson">
+        <?php
+        $json = file_get_contents("/volumeUSB10/usbshare/docker/anime-loads/ani.json");
+        $data = json_decode($json);
+
+        if ($data && count($data->anime)) {
+            foreach (array_reverse($data->anime) as $anime) {
+                $urlName = substr($anime->url, strrpos($anime->url, '/') + 1);
+                
+                // Cover Logic
+                $coverToDisplay = '';
+                if (!file_exists('./anime_cover/'.$urlName.'.png') || !file_exists('./anime_cover/'.$urlName.'.txt')) {
+                    $url = 'https://www.anisearch.de/anime/index/page-1?char=all&text=' . $urlName . '&smode=1&sort=date&order=asc&view=2&kev=7478ce6e';
+                    $options = array(
+                        CURLOPT_RETURNTRANSFER => 1, 
+                        CURLOPT_USERAGENT      => "Mozilla/5.0",  
+                        CURLOPT_FOLLOWLOCATION => true,   
+                        CURLOPT_CONNECTTIMEOUT => 5,
+                        CURLOPT_TIMEOUT => 10,
+                        CURLOPT_REFERER => 'https://www.anisearch.de/',
+                    );
+                    $ch = curl_init($url); curl_setopt_array($ch, $options);
+                    $htmlContent = curl_exec($ch); curl_close($ch);
+                    
+                    $doc = new DOMDocument();
+                    libxml_use_internal_errors(true);
+                    $doc->loadHTML($htmlContent);
+                    libxml_clear_errors();
+                
+                    $detailsRedirectCoverURL = '';
+                    $gotElement = $doc->getElementById("details-cover");
+                    if ($gotElement != NULL) { $detailsRedirectCoverURL = $gotElement->getAttribute('src'); }
+                    
+                    $resultsCoverURL = '';
+                    $xpath = new DomXPath($doc);
+                    $images = [];
+                    foreach ($xpath->query("//th[contains(@class, 'showpop')]") as $img) {
+                        if ($img->hasAttribute('data-tooltip')) {
+                            preg_match('/< *img[^>]*src *= *["\']?([^"\']*)/i', $img->getAttribute('data-tooltip'), $match);
+                            if (isset($match[1])) $images[] = trim($match[1], '\'" ');
+                        }
+                    }
+                    if (isset($images[0]) && $images[0] != NULL) { $resultsCoverURL = $images[0]; }
+                
+                    if ($detailsRedirectCoverURL != '') { $coverToDisplay = $detailsRedirectCoverURL; } 
+                    else if ($resultsCoverURL != '') { $coverToDisplay = $resultsCoverURL; }
+                
+                    if ($coverToDisplay != '') {
+                        $file = fopen('./anime_cover/'.$urlName.'.png', 'w');
+                        $ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, $coverToDisplay);
+                        curl_setopt($ch, CURLOPT_FAILONERROR, true);
+                        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+                        curl_setopt($ch, CURLOPT_FILE, $file);
+                        curl_exec($ch); curl_close($ch); fclose($file);
+                    }
+                }
+                
+                // Meta info
+                $flag = (strpos($anime->customPackage, 'japanese') !== false) ? 'japan' : 'germany';
+                $maxEpisodesSaved = $anime->maxEpisodes == 1337 ? 1 : $anime->maxEpisodes;
+                preg_match('/\d+$/', $anime->anisearchUrl, $matches);
+                $anisearchId = $matches[0] ?? '';
+                
+                $isCompleted = ((strpos($anime->customPackage, 'movie') !== false && $anime->episodes == 1 && count($anime->missing) == 0) || ($anime->episodes == $maxEpisodesSaved && count($anime->missing) == 0));
+                $releaseUID = ($anime->releaseUID != "") ? "..." . substr($anime->releaseUID, -20) : "";
+                $isError = (strpos($anime->status, 'Release fehlerhaft') !== false && $releaseUID != "");
+                
+                $cardClass = "";
+                if ($isCompleted) $cardClass = "status-completed";
+                if ($isError) $cardClass = "status-error";
+                
+                $missingText = count($anime->missing) > 0 ? implode(', ', $anime->missing) : '-';
+                
+                echo '
+                <div class="anime-grid-item">
+                    <div class="premium-card ' . $cardClass . '">
+                        <div class="card-img-wrapper">
+                            <img data="' . htmlspecialchars($anime->url) . '" src="getcover.php?url=' . urlencode($anime->coverUrl) . '&id=' . $anisearchId . '&urlName=' . urlencode($urlName) . '">
+                        </div>
+                        <div class="card-info">
+                            <div class="anime-title" data="' . htmlspecialchars($anime->url) . '" title="' . htmlspecialchars($anime->name) . '">' . htmlspecialchars($anime->name) . '</div>
+                            <div class="premium-badge">' . $anime->customPackage . '</div>
+                            
+                            <div class="meta-data-grid">
+                                <div class="meta-text text-truncate"><i class="bi bi-hdd text-secondary me-1"></i> Rel ID: <span class="text-light">' . $anime->releaseID . '</span></div>
+                                <div class="meta-text text-truncate"><i class="bi bi-hash text-secondary me-1"></i> Ani ID: <span class="text-light">' . $anisearchId . '</span></div>
+                            </div>
+                            
+                            <div class="meta-text mb-2 text-truncate"><i class="bi bi-activity text-secondary me-1"></i> <span class="text-light">' . $anime->status . '</span></div>
+                            
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <div class="meta-text m-0 fw-bold flex-shrink-0" style="color: #56d364;"><i class="bi bi-check2-circle me-1"></i>' . $anime->episodes . '/' . $maxEpisodesSaved . '</div>
+                                <div class="meta-text m-0 text-danger text-truncate" title="' . $missingText . '"><i class="bi bi-exclamation-triangle me-1"></i>' . $missingText . '</div>
+                            </div>
+                            
+                            <div class="card-bottom-actions">
+                                <button data="?unmonitor=' . urlencode($anime->customPackage) . '" class="unmonitor-btn">Unmonitor</button>
+                                ' . (file_exists("$flag.png") ? '<img src="' . $flag . '.png" class="flag-icon" />' : '') . '
+                            </div>
+                        </div>
+                    </div>
+                </div>';
+            }
+        }
+        ?>
+    </div>
+
+    <!-- Bottom Section: AniSearch Toplist -->
+    <div class="d-flex align-items-center mb-4 mt-5">
+        <h4 class="m-0 text-white fw-bold"><i class="bi bi-fire me-3 text-warning" style="color: #e3b341 !important;"></i>Weekly Toplist</h4>
+        
+        <div class="d-flex align-items-center gap-2 ms-5">
+			<select id="year" class="form-select form-select-sm bg-black" style="width: 120px;">
+				<?php
+				$currentYear = date("Y");
+				for ($y = $currentYear; $y >= 2000; $y--) { echo "<option value='$y'>$y</option>"; }
+				?>
+			</select>
+			<select id="week" class="form-select form-select-sm bg-black" style="width: 100px;">
+				<?php
+				$currentWeek = date('W') - 1;
+				for ($w = 1; $w <= 52; $w++) {
+					$selected = ($w == $currentWeek) ? 'selected' : '';
+					echo "<option value='$w' $selected>$w</option>";
+				}
+				?>
+			</select>
+			<button id="updateButton" class="btn btn-surface btn-sm px-3"><i class="bi bi-arrow-repeat"></i></button>
+		</div>
+    </div>
+
+    <div class="toplist-wrapper mb-5">
+        <div id="prevweek" class="nav-overlay-btn nav-overlay-left">
+            <i class="bi bi-chevron-left nav-arrow"></i>
+        </div>
+        <div id="nextweek" class="nav-overlay-btn nav-overlay-right">
+            <i class="bi bi-chevron-right nav-arrow"></i>
+        </div>
+        <img id="animeImage" src="" class="img-fluid w-100 d-block" alt="AniSearch Toplist">
+    </div>
+
+</div>
+
+<script>
+    // Toplist Logic
+    function updateImage() {
+        var selectedYear = $("#year").val();
+        var selectedWeek = $("#week").val();
+        $("#animeImage").attr("src", `https://api.anisearch.de/v1/trending/anime/${selectedYear}-${selectedWeek}.webp`);
+    }
+
+    $("#updateButton").on("click", updateImage);
+    
+    $("#prevweek").on("click", function() {
+        var selectBox = $('#week');
+        var selectedOption = selectBox.find(':selected');
+        var prevOption = selectedOption.prev('option');
+        if (prevOption.length > 0) {
+            selectedOption.removeAttr('selected');
+            prevOption.prop('selected', true);
+        }
+        updateImage();
+    });
+    
+    $("#nextweek").on("click", function() {
+        var selectBox = $('#week');
+        var selectedOption = selectBox.find(':selected');
+        var nextOption = selectedOption.next('option');
+        if (nextOption.length > 0) {
+            selectedOption.removeAttr('selected');
+            nextOption.prop('selected', true);
+        }
+        updateImage();
+    });
+
+    updateImage(); 
+</script>
+
+<?php
+} else {
+    // --- Login Screen ---
+?>
+<div class="d-flex align-items-center justify-content-center vh-100" style="background-color: #0d1117;">
+    <div class="panel" style="width: 400px;">
+        <div class="p-4 border-bottom border-secondary bg-black text-center" style="border-radius: 12px 12px 0 0;">
+            <h4 class="mb-0 text-white fw-bold"><i class="bi bi-cloud-arrow-down-fill text-primary me-2"></i>Anime-Loads</h4>
+        </div>
+        <div class="p-4">
+            <form method="POST" action="index.php">
+                <div class="mb-3">
+                    <label class="mb-2">Username</label>
+                    <input type="text" name="user" class="form-control" required>
+                </div>
+                <div class="mb-4">
+                    <label class="mb-2">Password</label>
+                    <input type="password" name="pass" class="form-control" required>
+                </div>
+                <button type="submit" name="submit" class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-box-arrow-in-right me-2"></i>Sign In</button>
+            </form>
+        </div>
+    </div>
+</div>
+<?php
+}
+?>
+
+</body>
+</html>

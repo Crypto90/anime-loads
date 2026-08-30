@@ -1,8 +1,15 @@
 <?php
+$configFile = '/config/config.json';
+if (!file_exists($configFile)) {
+    header('Location: setup.php');
+    exit;
+}
+$config = json_decode(file_get_contents($configFile), true);
+$base_dir = $config['base_dir'];
+
 error_reporting(E_ERROR | E_PARSE);
 header('Access-Control-Allow-Origin: *');
 header("Content-type: text/plain");
-
 
 	//
 	// Converts Bashoutput to colored HTML
@@ -28,14 +35,14 @@ header("Content-type: text/plain");
 
 
 	if ($_GET['file'] == 1) {
-		echo convertBash(file_get_contents('/config/manualOutput.log'));
+		echo convertBash(file_get_contents($base_dir . '/manualOutput.log'));
 	} else if ($_GET['file'] == 10) {
-		echo convertBash(file_get_contents('/config/docker_live_output.log'));
+		echo convertBash(file_get_contents($base_dir . '/docker_live_output.log'));
 	} else if ($_GET['file'] == 2) {
 		
 		
 		
-		$json=file_get_contents("/config/ani.json");
+		$json=file_get_contents($base_dir . "/ani.json");
 		$data =  json_decode($json);
 
 		 if (count($data->anime)) {
@@ -138,7 +145,10 @@ header("Content-type: text/plain");
 			
 			
 				// Output a row
+				// cover url: https://www.anime-loads.org/files/image/w200-saikin-yatotta-maid-ga-ayashii-cover.jpg
 				$urlName = substr($anime->url, strrpos($anime->url, '/') + 1);
+				//echo '<td style="width: 70%;" ><div class="imageCoverDiv" imageCoverURL="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpg"></div><div class="imageCoverDiv" imageCoverURL="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpeg"></div><div class="imageCoverDiv" imageCoverURL="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.png"></div></td>';
+				//echo '<td style="width: 70%;" ><img src="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpg" /><img src="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpeg" /><img src="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.png" /></td>';
 				
 			
 				$flag = 'germany';
@@ -160,22 +170,33 @@ header("Content-type: text/plain");
 				if ((strpos($anime->customPackage, 'movie') !== false && $anime->episodes == 1 && count($anime->missing) == 0) || ($anime->episodes == $maxEpisodesSaved && count($anime->missing) == 0)) {
 					$completedGreenBGStyle = 'background-color: rgb(15, 70, 25) !important;';
 				}
+				
+				$releaseUID = "";
+				if ($anime->releaseUID != "") {
+					$releaseUID = "..." . substr($anime->releaseUID, -20);
+				}
+				
+				
+				if (strpos($anime->status, 'Release fehlerhaft') !== false && $releaseUID != "") {
+					$completedGreenBGStyle = 'background-color: rgb(110, 0, 0) !important;';
+				}
 			
 				echo '<div class="card bg-dark text-white mb-3" style="max-width: 373px; float: left; margin: 10px 10px 0 0 !important; height: 210px; width: 374px;' . $completedGreenBGStyle . '">';
 				echo '  <div class="row g-0">';
 				echo '	<div class="col-md-4">';
 				//echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="./anime_cover/'.$urlName.'.png" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
-				echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="getcover.php?url=' . $urlName . '&id=' . $anisearchId . '" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
+				echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="getcover.php?url=' . urlencode($anime->coverUrl) . '&id=' . $anisearchId . '&urlName=' . urlencode($urlName) . '" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
+				//echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="' . $anime->coverUrl . '" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
 				echo '	</div>';
 				echo '	<div class="col-md-8">';
-				echo '	  <div class="card-body" style="text-align: left; height: 210px; overflow-y: scroll;">';
-				echo '		<h5 class="card-title" data="' . $anime->url . '" style="color: lightgrey; cursor: pointer;">' . $anime->name . ' <span style="color: darkblue; font-size: 10px;">(' . $anime->year . ')</span> <br><span style="color: lightblue; font-size: 10px;">(ReleaseID: ' . $anime->releaseID . ')</span></h5>';
+				echo '	  <div class="card-body" style="text-align: left; height: 210px; overflow-y: scroll; scrollbar-width: thin; scrollbar-color: #363e44 #202529;">';
+				echo '		<h5 class="card-title" data="' . $anime->url . '" style="color: lightgrey; cursor: pointer;">' . $anime->name . ' <span style="color: green; font-size: 10px;">(' . $anime->year . ')</span> <br><span style="color: lightblue; font-size: 10px;">ReleaseID: ' . $anime->releaseID . '</span><br><span style="color: lightblue; font-size: 10px;">AniSearchID: ' . $anisearchId . '</span><br><span style="color: lightblue; font-size: 10px;">ReleaseUID: ' . $releaseUID . '</span></h5>';
 				echo '	    <p class="card-text" style="color: orange; font-size: 12px;"><i class="bi bi-box-seam"></i> ' . $anime->customPackage . '</p>';
 				echo '	    <p class="card-text" style="font-size: 12px;"><i class="bi bi-calendar-range"></i> Status: ' . $anime->status . '</p>';
 				echo '	    <p class="card-text" style="color: green; font-size: 12px;"><i class="bi bi-file-earmark-check"></i> ' . ($anime->episodes . ' episodes / ' . $maxEpisodesSaved . ' total') . '</p>';
 				echo '	    <p class="card-text" style="color: red; font-size: 12px;"><i class="bi bi-file-earmark-excel"></i> ' . (count($anime->missing) > 0 ? 'Episode # ' . implode(', ', $anime->missing) . ' missing' : '-') . '</p>';
 				echo '	    <button data="?unmonitor=' . urlencode($anime->customPackage) . '" class="unmonitorBtn btn btn-danger btn-sm" style="position: absolute; left: 0; top: 179px; width: 124px; height: 26px; font-size: 10px; padding-top: 5px;">Nicht mehr beobachten</button>';
-				echo '	    <img src="' . $flag . '.png" style="position: absolute; bottom: 0; right: 0; width: 30px; opacity: 0.5;" />';
+				echo '	    <img src="' . $flag . '.png" style="position: absolute; bottom:-5px; right: 15px; width: 30px; opacity: 0.5;" />';
 				echo '	  </div>';
 				echo '	</div>';
 				echo '  </div>';
@@ -183,55 +204,94 @@ header("Content-type: text/plain");
 				$reverseIndex--;
 			}
 			echo '</div>';
+			
+			
+			
+		
 		}
+
+				
+		
+		
+		
+		//$data = explode("\n",explode('"settings":', file_get_contents( "/volumeUSB10/usbshare/docker//anime-loads/ani.json" ))[0]);
+		//foreach(array_reverse($data) as $value) { 
+		//	echo $value."\n";
+		//}
+		
+		//echo file_get_contents($base_dir . '/ani.json');
 	} else if ($_GET['file'] == 3) {
-		echo file_get_contents('/config/downloading_and_monitoring.txt');
+		echo file_get_contents($base_dir . '/downloading_and_monitoring.txt');
 	} else if ($_GET['file'] == 4) {
-		echo file_get_contents('/config/no_releases_found_log.txt');
+		echo file_get_contents($base_dir . '/no_releases_found_log.txt');
 	} else if ($_GET['file'] == 77) {
-		echo file_get_contents('/config/queue.txt');
+		echo file_get_contents('queue.txt');
 	} else if ($_GET['file'] == 78) {
 		//echo file_get_contents('requestlog.txt');
 		$logFilePath = 'requestlog.txt'; // Replace this with the path to your log file
 
 		$lines = [];
-		$linesToRead = 5;
+		$linesToRead = 10;
 
 		// Read the file line by line
 		$file = new SplFileObject($logFilePath);
 		$file->seek(PHP_INT_MAX); // Move the pointer to the end of the file
-
+		
+		$aniJsonContent = file_get_contents($base_dir . '/ani.json');
+		
 		// Start from the end of the file and store lines in an array
 		while ($file->key() > 0 && count($lines) < $linesToRead) {
 			$file->seek($file->key() - 1);
 			array_unshift($lines, $file->current());
 		}
-
+		
+		
+		echo "<span style='color: red;'>RED</span> Currently not monitored | <span style='color: green;'>GREEN</span> Currently monitored\n";
 		// Output the last 10 lines in reverse order (if needed)
 		$count = 1;
 		for ($i = $linesToRead - 1; $i >= 0; $i--) {
 			if ($lines[$i] == '') {
 				continue;
 			}
-			echo "$count. " . $lines[$i] . "\n";
+			
+			$animeURLName = end(explode("/", explode(";", $lines[$i])[0]));
+			if (strpos($aniJsonContent, $animeURLName) !== false) { 
+				echo "<span style='color: green;'>$count. " . $lines[$i] . "</span>\n";
+			} else {
+				echo "<span style='color: red;'>$count. " . $lines[$i] . "</span>\n";
+			}
+			
+			//echo "$count. " . $lines[$i] . "\n";
 			$count++;
 		}
 		
 		
 	} else if ($_GET['file'] == 5) {
-		$output = shell_exec("find /downloads -path '*german*tv*' -printf '%s -- %p\n' -o -path '*german*movie*' -printf '%s -- %p\n' -o -path '*japanese*tv*' -printf '%s -- %p\n' -o -path '*japanese*movie*' -printf '%s -- %p\n' 2>/dev/null | grep -v -E 'completed|series_complete|intermediate|movies_complete|tmp'");// | grep -oP '[^/]*$'
-		$output = preg_replace('/[^\d\s-].*\//', '', $output);
-		$output = preg_replace('/[^\d\s-].*$/', '', $output);
-		$output = preg_replace('/32 -- /', '<br />', $output);
-		$output = nl2br($output);
-		echo $output;
+        $extDir = $config['jd_extraction_dir'] ?? '';
+        if (empty($extDir) || !is_dir($extDir)) {
+            echo "";
+        } else {
+            $cmd = sprintf("find %s -path '*german*tv*' -printf '%%s -- %%p\n' -o -path '*german*movie*' -printf '%%s -- %%p\n' -o -path '*japanese*tv*' -printf '%%s -- %%p\n' -o -path '*japanese*movie*' -printf '%%s -- %%p\n' 2>/dev/null | grep -v -E 'completed|series_complete|intermediate|movies_complete|tmp'", escapeshellarg($extDir));
+            $output = shell_exec($cmd);
+            $output = preg_replace('/[^\d\s-].*\//', '', $output);
+            $output = preg_replace('/[^\d\s-].*$/', '', $output);
+            $output = preg_replace('/32 -- /', '<br />', $output);
+            $output = nl2br(trim($output));
+            echo $output;
+        }
 	} else if ($_GET['file'] == 7) {
-		$output = shell_exec("find /volumeUSB10/usbshare -path '*german*tv*' -printf '%s -- %p\n' -o -path '*german*movie*' -printf '%s -- %p\n' -o -path '*japanese*tv*' -printf '%s -- %p\n' -o -path '*japanese*movie*' -printf '%s -- %p\n' 2>/dev/null | grep -v -E 'completed|series_complete|intermediate|movies_complete|tmp'");// | grep -oP '[^/]*$'
-		$output = preg_replace('/[^\d\s-].*\//', '', $output);
-		$output = preg_replace('/[^\d\s-].*$/', '', $output);
-		$output = preg_replace('/32 -- /', '<br />', $output);
-		$output = nl2br($output);
-		echo $output;
+        $downDir = $config['jd_download_dir'] ?? '';
+        if (empty($downDir) || !is_dir($downDir)) {
+            echo "";
+        } else {
+            $cmd = sprintf("find %s -path '*german*tv*' -printf '%%s -- %%p\n' -o -path '*german*movie*' -printf '%%s -- %%p\n' -o -path '*japanese*tv*' -printf '%%s -- %%p\n' -o -path '*japanese*movie*' -printf '%%s -- %%p\n' 2>/dev/null | grep -v -E 'completed|series_complete|intermediate|movies_complete|tmp'", escapeshellarg($downDir));
+            $output = shell_exec($cmd);
+            $output = preg_replace('/[^\d\s-].*\//', '', $output);
+            $output = preg_replace('/[^\d\s-].*$/', '', $output);
+            $output = preg_replace('/32 -- /', '<br />', $output);
+            $output = nl2br(trim($output));
+            echo $output;
+        }
 	} else if ($_GET['file'] == 6) {
 		//generate cover
 		//first check if cover does not exist

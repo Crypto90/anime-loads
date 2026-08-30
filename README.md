@@ -1,384 +1,94 @@
-# Animeloads download automation wrapper with webinterface
+# Anime-Loads Universal Docker 🎬📦
 
-Docker volume mapping:
-map a folder to container "/config".
+![Hero Banner](screenshots/hero_banner.jpg)
 
-![Webinterface screenshot 1](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-07-42.png?raw=true)
+A fully automated, self-hosted Anime and Movie downloader for [Anime-Loads](https://www.anime-loads.org/), packed into a portable, easy-to-use Docker container. 
 
-![Webinterface screenshot 2](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-07-53.png?raw=true)
+This project is a complete modern rewrite of the original bare-metal Python CLI scripts, bringing a premium Web UI, an interactive Setup Wizard, automated smart-moving, and Plex integration into a single containerized solution!
 
-![Webinterface screenshot 3](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-08-01.png?raw=true)
-
-![Webinterface screenshot 4](https://github.com/Crypto90/anime-loads/blob/main/screenshots/2023-11-08_23-08-21.png?raw=true)
-
-
-
-
-# Animeloads
-
-Das Projekt besteht aus 3 Teilen:
-
-## anibot.py
-
-    Ein vollautomatischer Bot für Anime-Loads für automatische Downloads, mit optionalem Support für Pushbullet 
-    für mobile Benachrichtigungen
-
-    Erlaubt das hinzufügen/löschen von Anime zu einer Liste, entweder durch Suche oder Eingabe eines Links. 
-    Diese Anime in dieser Liste werden alle X Sekunden nach neuen Folgen geprüft.
-
-    Falls der Anime mehr Folgen hat, als bereits runtergeladen wurde, werden sie automatisch zu 
-    JDownloader hinzugefügt.
-    Falls JDownloader zu dem Zeitpunkt nicht verfügbar ist, werden die 
-    Episoden zu der Liste fehlender Episoden hinzugefügt und zu einem 
-    späteren Zeitpunk heruntergeladen.
-
-    Anime können außerdem mit 0 bereits runtergeladenen Episoden hinzugefügt werden, daraufhin 
-    wird der ganze Anime komplett heruntergeladen
-
-    In nächster Zeit wird noch direkter Support für den Download von Serien kommen, damit die 
-    Abhängigkeit zu JDownloader wegfällt
-
-[Mehr Infos und Installation](#anibot.py)
-
-<br>
-
-## animeloads.py
-    
-    Die eigentliche API, mit ihr kann einfach mit Serien und Filmen auf Anime-Loads interagiert werden
-
-    - Erlaubt Suche nach Anime oder direktes Eingeben der URL eines Anime
-    - Einloggen in Accounts für mehr Downloads und Verlauf im Webinterface
-    - Details über Anime:
-        - Name (Englisch, Deutsch, Japanisch)
-        - Episoden, Genre, Jahr, Status, Laufzeit
-    - Details über Releases:
-        - Qualität (Auflösung und Audio/Video-Format)
-        - Sprachen (Audio und Untertitel) und verfügbare Episoden
-    - Extrahieren von Downloadlinks oder direktes hinzufügen zu JDownloader
-
-[Mehr Infos und Dokumentation](#animeloads.py)
-
-<br>
-
-## downloader.py
-
-    Ein Kommandozeilen-Tool für Anime-Loads
-    - Unterstützt Suche nach Anime oder direkte Eingabe der URL
-    - Auflistung der Releases
-    - Login für mehr tägliche Downloads/Verlauf im Webinterface
-    - Ausgabe von uploaded/ddownload links
-    - Automatisches hinzufügen von Links zu JDownloader
-    - Auswählen von bestimmten Releases
-    - Zeigt Release mit bester Qualität, meisten Episoden oder meisten Sprachen an
-    - Download von ein einzelnen Episoden oder ganzen Staffeln
-    - Download einer Liste mit mehreren Anime
-
-[Mehr Infos und Installation](#downloader.py)
-
-<br>
-Im js Ordner sind 2 Javascript Dateien, mit denen Ad-Cookies erstellt werden in einem Versuch, nicht mehr als Adblock erkannt zu werden
-<br>
-
-## Docker Quickstart
-
-Die Dockerbefehle erstellen in dem aktuellen Ordner einen Unterordner "config", in dem die Einstellungen etc. gespeichert werden
-
-Info für Raspberry Pi:
-für das Dockerimage immer `pfuenzle/anime-loads:arm` anstatt dem normalen verwenden.
-
-
-### anibot.py:
-
-Container pullen:
-
-    - docker pull pfuenzle/anime-loads
-
-Falls noch keine Config existiert:
-
-    - docker run --rm -it -v $PWD/config:/config pfuenzle/anime-loads --interactive
-
-andernfalls einen Ordner "config" erstellen und eine bereits vorhandene ani.json reinverschieben
-
-Container starten (-it durch -dit ersetzen, um den Container im Hintergrund zu starten:
-
-    - docker run --rm -it -v $PWD/config:/config pfuenzle/anime-loads
-
-Docker-compose:
-```
 ---
-version: "2.1"
+
+## 📸 Interface Showcase
+
+**The Modern Dashboard** — Monitor your active downloads, see disk usage, and manage your JDownloader queue directly from the WebUI.
+![Dashboard Top](screenshots/dashboard.png)
+![Dashboard Bottom](screenshots/dashboard_bottom.png)
+
+**Interactive Setup Wizard** — A simple 4-step wizard guides you through configuring your paths, JDownloader credentials, and Plex integrations without ever touching a config file.
+![Setup Wizard](screenshots/wizard.png)
+
+**Settings & Validation** — Tweak your setup on the fly with live credential validation for JDownloader and Plex Webhooks.
+![Settings](screenshots/settings.png)
+
+**Smart Folder Manager** — Easily move finished extractions from your staging drives to your final long-term storage or USB drives with a single click.
+![Folder Manager](screenshots/folder_manager.png)
+
+---
+
+## ✨ Key Features
+
+- **Universal Docker Container**: Everything you need (PHP, Nginx, Python, Selenium/Geckodriver, Cron) is baked into a single image. No complex host dependencies!
+- **Beautiful Web Interface**: A premium, responsive dashboard built with Bootstrap 5 and modern styling.
+- **Automated "Set and Forget"**: 
+  - Add an anime URL to your monitored list.
+  - The container automatically checks for new episodes in the background every few minutes.
+  - Episodes are sent to JDownloader automatically.
+- **Smart Auto-Mover**: Once JDownloader finishes extracting a file, the built-in `auto_mover.py` detects it and smoothly transfers it to your final storage drive.
+- **Plex Integration**: Automatically triggers a Plex Library scan via Webhook as soon as new episodes are moved to your final storage.
+- **Folder Manager**: Built-in tool to archive and organize your finished series across multiple disks or USB drives.
+
+---
+
+## 🚀 Quickstart Guide
+
+Deploying the container is incredibly simple. All configuration is done through the WebUI on your first visit!
+
+### Using Docker Run
+
+```bash
+docker run -d \
+  --name anime-loads \
+  -p 8080:80 \
+  -v /path/to/your/appdata/anime-loads:/config \
+  -v /path/to/downloads:/downloads \
+  -v /path/to/final/media:/video \
+  anime-loads-universal:latest
+```
+
+### Using Docker Compose
+
+```yaml
+version: "3"
 services:
   anime-loads:
-    image: pfuenzle/anime-loads:latest
+    image: anime-loads-universal:latest
     container_name: anime-loads
+    ports:
+      - "8080:80"
     volumes:
-      - ./config:/config
+      - ./config:/config           # Configuration and Database
+      - /mnt/downloads:/downloads  # Where JDownloader downloads/extracts
+      - /mnt/media:/video          # Your final Plex media storage
     restart: unless-stopped
 ```
 
-Config ändern:
+Once the container is running, open your browser and navigate to:
+`http://localhost:8080`
 
-    - docker run --rm -it -v $PWD/config:/config pfuenzle/anime-loads add
+You will automatically be redirected to the **Setup Wizard** to complete your installation!
 
-    - docker run --rm -it -v $PWD/config:/config pfuenzle/anime-loads edit
+---
 
-    - docker run --rm -it -v $PWD/config:/config pfuenzle/anime-loads remove
+## ⚙️ How It Works (Architecture)
 
+1. **Frontend (PHP/Nginx)**: Serves the WebUI, the Dashboard, and the Folder Manager. When you add a new Anime, it saves the details to `/config/ani.json`.
+2. **Backend (Python)**: `download_anime.py` runs automatically via Cron. It reads your `/config/ani.json`, checks Anime-Loads for new episodes (using headless Firefox if necessary), and pushes download links directly to your linked JDownloader account.
+3. **Auto-Mover (Python)**: `auto_mover.py` runs every 5 minutes to scan your Extraction Directory. When it finds finished episodes, it moves them to your Final Storage Directory and hits your Plex Webhook to refresh your library.
 
-### downloader.py:
+---
 
-Container erstellen:
-    - `docker build docker_downloader/ -t anidownloader`
+## 🛠️ Requirements & Notes
 
-Falls noch keine Settings existieren:
-    - `docker run --rm -it -v $PWD/config:/config anidownloader`
-andernfalls einen Ordner "config" erstellen und settings.json reinverschieben
-
-Container starten (mögliche gewünschte Argumente einfach hinter Befehl einfügen):
-    - `docker run --rm -it -v $PWD/config:/config anidownloader`
-
-
-<br><br><br><br>
-
-<h2 id="anibot.py">
-anibot.py
-</h2>
-
-Benötigte Software:
-
-    - Firefox und Geckodriver ( https://github.com/mozilla/geckodriver/releases )
-    ODER
-    - Chrome und Chromedriver ( https://chromedriver.chromium.org/ )
-    - Python 3
-    - JDownloader2
-
-Der Driver wird dazu genutzt, um den jeweiligen Browser fernzusteuern, 
-um der Seite zu überzeugen, dass der Bot ein vollwertiger Nutzer wird, 
-da er sonst andernfalls aus irgendeinem Grund als Adblock erkannt wird.
-Hierbei wird allerdings kein Fenster geöffnet, d.h. alles funktioniert auch über SSH oder in der Konsole
-Der Driver wird nur für den Download verwendet, alle anderen Funktionen funktionieren 
-auch ohne ihn
-(Bin dabei zu versuchen, die Erkennung zu umgehen)
-
-!!!
-Falls man einen Fork der oben genannten Browser (z.B. Waterfox) hat oder er in einem anderen als in 
-dem Standardpfad installiert ist, muss der Pfad (inklusive .exe auf Windows oder Binary auf Linux) zu dem Browser angegeben werden,
-falls das Script danach fragt, da er sonst nicht  gefunden werden kann
-!!!
-<br><br><br>
-Ersteinrichtung:
-<br><br>
-Nach der Installation von Python 3 muss man nun das Repository runterladen.
-
-Das geht entweder (falls man GIT installiert hat) mit:
-
-`git clone https://github.com/Pfuenzle/anime-loads.git`
-
-Falls nicht, einfach [hier](https://github.com/Pfuenzle/anime-loads/releases) das neueste Release runterladen: https://github.com/Pfuenzle/anime-loads/releases und irgendwo entpacken.
-
-Unter Windows muss Geckodriver/Chromedriver in den aktuellen Ordner kopiert werden, damit er vom Script gefunden wird
-Unter Linux muss Chromedriver/Geckodriver stattdessen in "/usr/local/bin" kopiert werden.
-
-Nun öffnet CMD/Powershell/Shell in dem Ordner. Dazu klickt man in Windows entweder im Explorer auf die Leiste, die den aktuellen Pfad anzeigt und tippt "cmd" ein, oder öffnet CMD über die Suche und navigiert mit "cd \<Pfad\>" manuell in den Ordner
-Wenn man Linux nutzt, gehe ich davon aus, dass man weiß wie man eine Shell in dem Ordner bekommt
-
-Dort angekommen tippt man in die Konsole `pip install -r requirements.txt` ein. Damit werden alle abhängigkeiten installiert
-
-<br><br>
-
-Konfiguration und Start:
-<br><br>
-Die Allgemeine Benutzung funktioniert wie folgt:
-
-`python anibot.py <Befehl>`
-
-Mögliche Befehle:
-
-    help        Gibt Hilfe aus
-    start       Startet den Bot
-    edit        Einstellungen ändern, z.b. Welcher Browser, etc.. (Wird beim ersten mal zwingend aufgerufen)
-    add         Neuen Anime hinzufügen, entweder durch Suche oder eine URL
-    remove      Anime von Downloadliste löschen
-
-Wenn anibot.py normal durch einen Doppelklick geöffnet wird, startet der Bot normal, vorrausgesetzt, es ist mindestes bereits ein Anime in der Liste hinzugefügt
-
-Vor dem Start wird man zusätzlich noch gefragt, ob man sich einloggen oder die Einstellungen ändern möchte.
-
-Sobald der Bot gestartet ist, prüft er alle Anime in der Liste alle X Sekunden nach neuen verfügbaren Episoden und falls welche gefunden wurden, fügt er sie automatisch bei JDownloader ein
-
-
-Im Projekt enthalten ist eine Beispiel-Liste für die Season 2020/2021
-Um sie zu nutzen, einfach "ani.json.example_season2020_2021" in "ani.json" umbennen. 
-Beim nächsten Start werden automatisch neue Episoden der aktuellen Season heruntergeladen
-
-
-<br><br>
-
-<h2 id="animeloads.py">
-animeloads.py
-</h2>
-
-Bei selbsterklärenden Methoden wird nur der Rückgabewert genannt
-
-
-```
-Klassen:
-    -   animeloads:
-        -   __init__(user="", pw=""):
-                Falls user und pw gegeben ist, wird der Nutzer automatisch eingeloggt
-        -   search(query):
-                Sucht nach "query" und gibt eine Liste der Klasse "searchResult" zurück
-        -   getAnime(URL):
-                Gibt ein Anime-Objekt der Klasse anime zurück
-        -   login(user, pw):
-                Meldet den User nachträglich an
-    -   searchResult:
-        -   getURL()                string
-        -   getName()               int
-        -   getTyp()                string
-        -   getReleaseDate()        int
-        -   getCurrentEpisodeCount()int
-        -   getMaxEpisodeCount()    int
-        -   getDubLang()            list(string)
-        -   getSublang()            list(string)
-        -   getGenre()              string
-        -   tostring()              string
-        -   getAnime()              anime
-    -   anime:
-        -   downloadEpisode(episode, release, hoster, browser, optional browserlocation, optional jdhost):
-                episode:            int
-                release:            release
-                hoster:             0/1/animeloads.UPLOADED/animeloads.DDOWNLOAD
-                browser:            0/1/animeloads.CHROME/animeloads.FIREFOX
-                browserlocation:    str(Pfad zum Browser)
-                jdhost:             str(Hostname/IP von JDownloader, normalerweise 127.0.0.1) 
-        -   updateInfo():
-                Updated Info des Anime(z.B. Episodeanzahl)
-        -   getBestReleaseByQuality(optional releaseList):
-                Gibt bestes Release nach Qualität zurück
-        -   getBestReleaseByLanguage(optional releaseList):
-                Gibt Release mit meisten Sprachen zurück
-        -   getBestReleaseByEpisodes(optional releaseList):
-                Gibt Release mit meisten Episoden zurück
-        -   getName()               string
-        -   getNameGerman()         string
-        -   getNameJapanese()       string
-        -   getNameEnglish()        string
-        -   getURL()                string
-        -   getRuntime()            int
-        -   getType()               string
-        -   getSynonymes()          list(string)
-        -   getYear()               int
-        -   getCurrentEpisodes()    int
-        -   getMaxEpisodes()        int
-        -   getStatus()             string
-        -   getMainGenre()          string
-        -   getSideGenres()         list(string)
-        -   getTags()               list(tags)
-        -   getReleases()           list(release)
-        -   tostring()              string      
-    -   release:
-        -   getID()                 int
-        -   getGroup()              string
-        -   getResolution()         int
-        -   getAudioCodec()         string
-        -   getDubs()               list(string)
-        -   getSubs()               list(string)
-        -   getVideoFormat()        list(string)
-        -   getSize()               int         in MB
-        -   getPassword()           string
-        -   getAnmerkung()          string
-        -   getVideoCodec()         string
-
-Exceptions:
-    -   ALCaptchaException
-        -   Wird geworfen, falls die Seite ein Captcha zum download benötigt
-    -   ALInvalidBrowserException
-        -   Falls der gesetzte Browser nicht gesetzt oder nicht unterstützt wird
-    -   ALLinkExtractionException
-        -   Falls es einen Fehler beim holen der Links gibt, z.B. Serverseitig geändert
-    -   ALInvalidLoginException
-        -   Falls der Login mit den angegebenen Daten fehlgeschlagen ist
-```
-
-
-Beispielcode:
-
-```
-from animeloads import animeloads
-
-al = animeloads()                           #Erstellt das Animeloads Objekt, optional mit user/pw für login
-
-anime = al.getAnime("https://www.anime-loads.org/media/...")    #Holt Anime der URL im Parameter
-
-releases = anime.getReleases()              #Holt alle Release
-
-for release in releases:
-    print(release.tostring())               #Gibt alle Releases mit allen Attributen aus
-
-hoster = animeloads.UPLOADED                #Setzt hoster auf uploaded.net
-browser = animeloads.CHROME                 #Nutzt Chrome
-
-downloadlink = anime.downloadEpisode(1, releases[0], hoster, browser)   
-#Gibt den Downloadlink der ersten Episode des Anime mit dem ersten Release von Uploaded zurück
-
-print(downloadlink)                         #Gibt den/die Downloadlink(s) zurück
-```
-
-<br><br>
-
-<h2 id="downloader.py">
-downloader.py
-</h2>
-
-Lies zur Installation den Teil Ersteinrichtung von [anibot.py](#anibot.py) durch.
-
-Nach der Einrichtung kann der Downloader auf 2 Arten gestartet werden.
-<br><br>
-Methode 1 ist der interaktive Download, entweder durch doppelklick auf downloader.py 
-oder durch 
-`python downloader.py`
-
-Im interaktiven Modus wird man alles nötige gefragt und danach entweder der Link zurückgegeben oder zu JDownloader hinzugefügt. Die hierbei festgelegten Einstellungen werden in settings.json gespeichert und können wiederverwendet werden
-<br><br>
-Methode 2 ist die nicht-interaktive Art, bei der alle nötigen Parameter direkt übergeben werden müssen
-
-```<downloader.py> [--url URL] [--user username] [--passwd password] [--list listfile] [--release release] [--episode episode] [--hoster hoster] [--jd 127.0.0.1] [--browser chrome] [--browserloc Browserpfad]```
-  
-
-Mögliche Parameter:
-
-    --help        Gibt Hilfe aus
-    --url         URL des Animes
-    --user        Nutzername zum Einloggen
-    --passwd      Passwort des Nutzer
-    --list        name der Liste mit Anime
-    --release     ID des Releases, das geladen werden soll
-    --episode     Episode(n), die geladen werden. Entweder als Zahl allein oder mehrere, getrennt durch Kommas
-    --hoster      Entweder uploaded oder ddownload
-    --jd          Falls Jdownloader benutzt werden soll: Als parameter dahinter den Host nennen, normalerweise 127.0.0.1
-    --browser     Genutzter Browser, chrome oder firefox
-    --browserloc  Pfad des gewählten Browser, falls Fork oder nicht an Standardpfad installiert
-
-<br><br>
-Download einer Liste:
-
-```
-Die Liste muss folgendens Format haben:
-
-url,release,episode1,episode5,episode6
-
-Die Parameter werden durch ein Komma getrennt.
-Der erste ist die URl des Anime und der zweite die ID des Releases das gewählt wurde.
-Diese zwei müssen mindestens gegeben sein. Danach können noch unendlich Episoden kommen,
-welche von dem Anime runtergeladen werden sollen, jeweils mit einem Komma getrennt
-
-Beispiel:
-https://www.anime-loads.org/media/anime,2
-Um alle Folgen des 2. Release des Anime runterzuladen
-
-Oder
-
-https://www.anime-loads.org/media/anime,1,4,5,6,9
-Um die Folgen 4,5,6 und 9 des ersten Release des Anime runterzuladen
-```
+- **JDownloader**: You must have an active instance of JDownloader connected to your [MyJDownloader](https://my.jdownloader.org/) account. The container sends links remotely to your JDownloader instance.
+- **Storage Volumes**: You must map your download directories into the container so the WebUI and Auto-Mover can see the files.
+- **Legacy Python Scripts**: The original CLI tools (`animeloads.py`, `downloader.py`, `anibot.py`) are still present under the hood, but are now orchestrated entirely by the WebUI and background cron jobs.

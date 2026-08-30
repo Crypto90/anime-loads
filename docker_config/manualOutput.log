@@ -1,0 +1,77 @@
+[33mConfig Datei: /config/ani.json
+[0m
+[33mBrowser Start fehlgeschlagen (Versuch 1/3), probiere erneut...
+[0m
+[33mBrowser Start fehlgeschlagen (Versuch 2/3), probiere erneut...
+[0m
+[33mGib nun entweder eine URL zu einem Anime-Eintrag oder einen Namen, nach dem du suchen willst ein
+[0m
+Sending input: Bleach: Thousand-Year Blood War - The Calamity
+[33mURL/Anime (Du kannst jederzeit "suche" eingeben, um zurück zur Suche zu kommen oder "exit", um das Programm zu beenden): 302
+[0m
+[33mErgebnisse: 
+[0m
+Found a matching result! Selecting 1. match.
+Sending input: 1
+[33m[1] Name: Bleach: Thousand-Year Blood War - The Calamity, Typ: , Episoden: 6/10, Dub: ['UNKNOWN'], Subs: ['UNKNOWN']
+[0m
+[33mWähle einen Anime (Zahl links daneben eingeben): 
+[0m
+[33m
+[0m
+[33mReleases:
+[0m
+[33m
+[0m
+[33mRelease ID: 1, Group: PuddingSama, Resolution: 1080p, Videocodec: UNKNOWN, Audiocodec: UNKNOWN, Dubs: ['Japanisch'], Subs: ['Deutsch', 'Englisch'], Format: MKV, Size: 0.0MB, Password: www.anime-loads.org, Release Anmerkungen: WebDL von Disney+
+[0m
+Found japanese 1080p release. Set RELEASE_ID_TO_DOWNLOAD to: 1
+[33m
+[0m
+[33m
+[0m
+Selecting last matched result (because its the newest): 1
+Sending input: 1
+[33mWähle eine Release ID: Du hast folgendes Release gewählt: Release ID: 1, Group: PuddingSama, Resolution: 1080p, Videocodec: UNKNOWN, Audiocodec: UNKNOWN, Dubs: ['Japanisch'], Subs: ['Deutsch', 'Englisch'], Format: MKV, Size: 0.0MB, Password: www.anime-loads.org, Release Anmerkungen: WebDL von Disney+
+[0m
+[33m
+[0m
+[33m
+[0m
+[33m================isMovieCheck================
+[0m
+[33m
+[0m
+[33m============================================
+[0m
+[33m
+[0m
+[33m
+[0m
+[33mDas Release hat 6 Episode(n)
+[0m
+Sending input: #
+[33mWieviel Episoden hast du bereits runtergeladen? Die restlichen verfügbaren werden dann automatisch heruntergeladen (Leerlassen, wenn nur neue Episoden runterladen willst): Fehlerhafte Eingabe, muss eine Zahl sein
+[0m
+Downloading all episodes so we need to send 0.
+Sending input: 0
+[33mWieviel Episoden hast du bereits runtergeladen? Die restlichen verfügbaren werden dann automatisch heruntergeladen (Leerlassen, wenn nur neue Episoden runterladen willst): 
+[0m
+Sending input:j
+Sending input: Bleach: Thousand-Year Blood War - The Calamity japanese 1080p tv
+[33m
+[0m
+[33mMöchtest du dem Anime einen spezifischen Paketnamen geben? Andernfalls wird der Name des Anime genutzt [J/N]: Packagename: Anime mit gleichem Release ist bereits in Liste, gehe zurück zur Suche
+[0m
+[33m
+[0m
+[33m
+[0m
+[33m
+[0m
+[33m
+[0m
+[33mGib nun entweder eine URL zu einem Anime-Eintrag oder einen Namen, nach dem du suchen willst ein
+[0m
+Finished! Exit...
+Sending input: exit
