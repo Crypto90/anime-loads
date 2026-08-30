@@ -214,12 +214,6 @@ header("Content-type: text/plain");
 		
 		
 		
-		//$data = explode("\n",explode('"settings":', file_get_contents( "/volumeUSB10/usbshare/docker//anime-loads/ani.json" ))[0]);
-		//foreach(array_reverse($data) as $value) { 
-		//	echo $value."\n";
-		//}
-		
-		//echo file_get_contents($base_dir . '/ani.json');
 	} else if ($_GET['file'] == 3) {
 		echo file_get_contents($base_dir . '/downloading_and_monitoring.txt');
 	} else if ($_GET['file'] == 4) {

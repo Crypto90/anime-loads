@@ -31,6 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $config['jd_password'] = $_POST['jd_password'];
     }
 
+    $config['web_user'] = trim($_POST['web_user'] ?? $config['web_user'] ?? 'admin');
+    if (!empty($_POST['web_password'])) {
+        $config['web_password'] = $_POST['web_password'];
+    }
+
     file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
     $success = true;
 }
@@ -140,6 +145,18 @@ $additional_dirs = $config['additional_dirs'] ?? [];
             </div>
             <div id="jd-validation-msg" class="mb-3 text-success-custom" style="display:none; font-weight:bold;"></div>
             
+            <h5 class="text-primary mt-4 mb-3">Web Interface Login</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">Username</label>
+                    <input type="text" class="form-control form-control-sm" name="web_user" value="<?= htmlspecialchars($config['web_user'] ?? 'admin') ?>">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">Password</label>
+                    <input type="password" class="form-control form-control-sm" name="web_password" placeholder="(Leave blank to keep unchanged)">
+                </div>
+            </div>
+
             <h5 class="text-primary mt-4 mb-3">Backup / Additional Targets</h5>
             <p class="text-white-50 small mb-3">Add additional paths (like external USB drives) here. The built-in Folder Manager tool allows you to easily move your finished anime folders to these disks to free up space on your main drive.</p>
             <div id="dir-list"></div>

@@ -406,7 +406,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const id = 'additional_' + dirCount++;
         const html = `
             <div class="dir-item" id="container_${id}">
-                <input type="text" class="form-control" name="additional_dirs[]" value="${value}" placeholder="/volumeUSB/video" onblur="verifyDir('${id}')" id="input_${id}">
+                <input type="text" class="form-control" name="additional_dirs[]" value="${value}" placeholder="/mnt/usb/video" onblur="verifyDir('${id}')" id="input_${id}">
                 <div class="validation-icon" id="icon_${id}">
                     <i class="bi bi-question-circle text-white-50"></i>
                 </div>

@@ -57,7 +57,6 @@ docker run -d \
 ### Using Docker Compose
 
 ```yaml
-version: "3"
 services:
   anime-loads:
     image: anime-loads-universal:latest

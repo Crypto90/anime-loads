@@ -13,7 +13,7 @@ import myjdapi
 # --- CREDENTIALS ---
 EMAIL = config.get('jd_email', '')
 PASSWORD = config.get('jd_password', '')
-DEVICE_ID = 'dc69ebedb8e5d8a1bd2618dddbee1280' 
+DEVICE_NAME = config.get('jd_device_name', '')
 
 try:
     jd = myjdapi.Myjdapi()
@@ -23,13 +23,22 @@ try:
     jd.update_devices()
     
     device = None
-    for d in jd.list_devices():
-        if d['id'] == DEVICE_ID:
-            device = jd.get_device(d['name'])
-            break
-            
-    if not device:
-        raise Exception(f"Gerät mit der ID {DEVICE_ID} wurde nicht gefunden.")
+    devices = jd.list_devices()
+    
+    if not devices:
+        raise Exception("No JDownloader devices found on this MyJDownloader account.")
+    
+    if DEVICE_NAME:
+        # Use a specific device if configured
+        for d in devices:
+            if d['name'] == DEVICE_NAME:
+                device = jd.get_device(d['name'])
+                break
+        if not device:
+            raise Exception(f"Device '{DEVICE_NAME}' not found. Available: {[d['name'] for d in devices]}")
+    else:
+        # Auto-select the first available device
+        device = jd.get_device(devices[0]['name'])
 
     action = sys.argv[1] if len(sys.argv) > 1 else 'status'
 

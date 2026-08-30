@@ -4,3 +4,17 @@ chromedriver.exe
 geckodriver.exe
 jdtest.py
 config/
+
+# Development / Screenshot tooling
+dummy_ani.json
+dummy_config.json
+mock_jd_backend.py
+refactor.py
+test.py
+screenshot-bot/node_modules/
+
+# IDE & OS
+.idea/
+__pycache__/
+*.pyc
+.DS_Store
