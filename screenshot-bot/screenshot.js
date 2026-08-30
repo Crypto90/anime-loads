@@ -13,17 +13,10 @@ const fs = require('fs');
     }
 
     try {
-        // 1. Dashboard (Top)
+        // 1. Dashboard
         await page.goto('http://localhost:8080/index.php?user=admin&pass=admin', { waitUntil: 'domcontentloaded' });
         await new Promise(r => setTimeout(r, 4000)); // wait for AJAX to load completely (JD remote, etc)
-        await page.screenshot({ path: path.join(screenshotsDir, 'dashboard.png') });
-
-        // 2. Dashboard (Bottom)
-        await page.evaluate(() => {
-            window.scrollBy(0, 800);
-        });
-        await new Promise(r => setTimeout(r, 1000));
-        await page.screenshot({ path: path.join(screenshotsDir, 'dashboard_bottom.png') });
+        await page.screenshot({ path: path.join(screenshotsDir, 'dashboard.png'), fullPage: true });
 
         // 3. Setup Wizard
         await page.goto('http://localhost:8080/setup.php', { waitUntil: 'domcontentloaded' });

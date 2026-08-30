@@ -12,7 +12,6 @@ This project is a complete modern rewrite of the original bare-metal Python CLI 
 
 **The Modern Dashboard** — Monitor your active downloads, see disk usage, and manage your JDownloader queue directly from the WebUI.
 ![Dashboard Top](screenshots/dashboard.png)
-![Dashboard Bottom](screenshots/dashboard_bottom.png)
 
 **Interactive Setup Wizard** — A simple 4-step wizard guides you through configuring your paths, JDownloader credentials, and Plex integrations without ever touching a config file.
 ![Setup Wizard](screenshots/wizard.png)
