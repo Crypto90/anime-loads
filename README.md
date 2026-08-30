@@ -1,4 +1,4 @@
-# Anime-Loads Universal Docker 🎬📦
+# Anime-Loads Universal Downloader 🎬📦
 
 ![Hero Banner](screenshots/hero_banner.jpg)
 
