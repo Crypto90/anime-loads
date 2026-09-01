@@ -26,9 +26,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'plex_token' => trim($_POST['plex_token'] ?? ''),
         'web_user' => $_POST['web_user'] ?? 'admin',
         'web_password' => $_POST['web_password'] ?? 'admin',
+        'myjd_device' => trim($_POST['myjd_device'] ?? ''),
+        'hoster' => (int)($_POST['hoster'] ?? 0),
         'setup_complete' => true
     ];
     file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
+
+    // Sync credentials and settings to ani.json for the backend
+    $aniFile = '/config/ani.json';
+    if (file_exists($aniFile)) {
+        $ani = json_decode(file_get_contents($aniFile), true);
+        if (is_array($ani) && isset($ani['settings'])) {
+            $ani['settings']['myjd_user'] = $config['jd_email'];
+            $ani['settings']['myjd_pw'] = $config['jd_password'];
+            $ani['settings']['myjd_device'] = $config['myjd_device'];
+            $ani['settings']['hoster'] = $config['hoster'];
+            file_put_contents($aniFile, json_encode($ani, JSON_PRETTY_PRINT));
+        }
+    }
+
     header("Location: index.php");
     exit;
 }
@@ -282,9 +298,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label class="form-label">Email</label>
                     <input type="email" class="form-control" id="jd_email" name="jd_email" required>
                 </div>
-                <div class="mb-4">
+                <div class="mb-3">
                     <label class="form-label">Password</label>
                     <input type="password" class="form-control" id="jd_password" name="jd_password" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Device Name</label>
+                    <input type="text" class="form-control" id="myjd_device" name="myjd_device" placeholder="e.g. JDownloader@anime-loads" required>
                 </div>
                 
                 <div id="jd-validation-msg" class="mb-3 text-center" style="display:none; font-weight:bold;"></div>
@@ -305,6 +325,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div id="step4_content">
+                    <p class="text-white-50 small mb-3">
+                        <i class="bi bi-cloud-arrow-down-fill"></i> <strong>Scraping Preferences:</strong> Select your preferred file hoster.
+                    </p>
+                    <div class="mb-4">
+                        <label class="form-label small">Preferred Hoster</label>
+                        <select class="form-control form-control-sm" name="hoster">
+                            <option value="0">DDownload</option>
+                            <option value="1">Rapidgator</option>
+                        </select>
+                    </div>
+                    <hr class="border-secondary mb-3">
+
                     <p class="text-white-50 small mb-3">
                         <i class="bi bi-info-circle-fill"></i> <strong>Category Subfolders:</strong> The Auto-Mover will automatically sort downloaded anime and movies into specific subfolders inside your <strong>Final Storage Directory</strong>. You can customize the names of these subfolders below.
                     </p>

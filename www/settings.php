@@ -36,7 +36,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $config['web_password'] = $_POST['web_password'];
     }
 
+    $config['myjd_device'] = trim($_POST['myjd_device'] ?? $config['myjd_device'] ?? '');
+    $config['hoster'] = (int)($_POST['hoster'] ?? $config['hoster'] ?? 0);
+    $config['timedelay'] = (int)($_POST['timedelay'] ?? $config['timedelay'] ?? 500);
+    $config['pushover_token'] = trim($_POST['pushover_token'] ?? $config['pushover_token'] ?? '');
+    $config['pushover_user'] = trim($_POST['pushover_user'] ?? $config['pushover_user'] ?? '');
+    $config['pushbullet_apikey'] = trim($_POST['pushbullet_apikey'] ?? $config['pushbullet_apikey'] ?? '');
+
     file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
+    
+    // Sync credentials and settings to ani.json for the backend
+    $aniFile = '/config/ani.json';
+    if (file_exists($aniFile)) {
+        $ani = json_decode(file_get_contents($aniFile), true);
+        if (is_array($ani) && isset($ani['settings'])) {
+            $ani['settings']['myjd_user'] = $config['jd_email'];
+            if (!empty($_POST['jd_password'])) {
+                $ani['settings']['myjd_pw'] = $config['jd_password'];
+            }
+            $ani['settings']['myjd_device'] = $config['myjd_device'];
+            $ani['settings']['hoster'] = $config['hoster'];
+            $ani['settings']['timedelay'] = $config['timedelay'];
+            $ani['settings']['pushover_token'] = $config['pushover_token'];
+            $ani['settings']['pushover_user'] = $config['pushover_user'];
+            $ani['settings']['pushbullet_apikey'] = $config['pushbullet_apikey'];
+            file_put_contents($aniFile, json_encode($ani, JSON_PRETTY_PRINT));
+        }
+    }
+
     $success = true;
 }
 
@@ -131,13 +158,17 @@ $additional_dirs = $config['additional_dirs'] ?? [];
 
             <h5 class="text-primary mt-4 mb-3">MyJDownloader Account</h5>
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label small">Email</label>
                     <input type="text" class="form-control form-control-sm" name="jd_email" id="jd_email" value="<?= htmlspecialchars($config['jd_email'] ?? '') ?>">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label small">Password</label>
                     <input type="password" class="form-control form-control-sm" name="jd_password" id="jd_password" placeholder="(Leave blank to keep unchanged)">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label small">Device Name</label>
+                    <input type="text" class="form-control form-control-sm" name="myjd_device" id="myjd_device" value="<?= htmlspecialchars($config['myjd_device'] ?? '') ?>">
                 </div>
             </div>
             <div class="mb-3">
@@ -145,6 +176,38 @@ $additional_dirs = $config['additional_dirs'] ?? [];
             </div>
             <div id="jd-validation-msg" class="mb-3 text-success-custom" style="display:none; font-weight:bold;"></div>
             
+            <h5 class="text-primary mt-4 mb-3">Scraping Preferences</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">Preferred Hoster</label>
+                    <select class="form-control form-control-sm" name="hoster">
+                        <option value="0" <?= (isset($config['hoster']) && $config['hoster'] == 0) ? 'selected' : '' ?>>DDownload</option>
+                        <option value="1" <?= (isset($config['hoster']) && $config['hoster'] == 1) ? 'selected' : '' ?>>Rapidgator</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">Scrape Delay (ms)</label>
+                    <input type="number" class="form-control form-control-sm" name="timedelay" value="<?= htmlspecialchars($config['timedelay'] ?? 500) ?>">
+                </div>
+            </div>
+
+            <h5 class="text-primary mt-4 mb-3">Push Notifications</h5>
+            <p class="text-white-50 small mb-2">Optional setup for mobile notifications on download success/failure.</p>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label small">Pushover Token</label>
+                    <input type="text" class="form-control form-control-sm" name="pushover_token" value="<?= htmlspecialchars($config['pushover_token'] ?? '') ?>">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label small">Pushover User</label>
+                    <input type="text" class="form-control form-control-sm" name="pushover_user" value="<?= htmlspecialchars($config['pushover_user'] ?? '') ?>">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label small">Pushbullet API Key</label>
+                    <input type="password" class="form-control form-control-sm" name="pushbullet_apikey" value="<?= htmlspecialchars($config['pushbullet_apikey'] ?? '') ?>">
+                </div>
+            </div>
+
             <h5 class="text-primary mt-4 mb-3">Web Interface Login</h5>
             <div class="row">
                 <div class="col-md-6 mb-3">
