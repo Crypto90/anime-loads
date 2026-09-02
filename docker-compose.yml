@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  anime-loads:
+    build: .
+    image: anime-loads-universal:latest
+    container_name: anime-loads
+    ports:
+      - "8080:80"
+    volumes:
+      - ./config:/config
+      - ./downloads:/downloads
+      - ./video:/video
+    environment:
+      - TZ=Europe/Berlin
+    restart: unless-stopped

@@ -45,6 +45,18 @@ fi
 ln -sf /config/ani.json /usr/src/app/ani.json
 ln -sf /config/ani_paused.json /usr/src/app/ani_paused.json
 
+# Graceful shutdown handler
+stop_services() {
+    echo "Received shutdown signal. Stopping services gracefully..."
+    kill "$ANIBOT_PID" 2>/dev/null
+    service cron stop 2>/dev/null
+    /etc/init.d/nginx stop 2>/dev/null
+    service "$php_service" stop 2>/dev/null
+    exit 0
+}
+
+trap 'stop_services' SIGTERM SIGINT
+
 # Supervised background daemon for anibot
 echo "Starting anibot daemon supervisor..."
 (
@@ -55,7 +67,11 @@ echo "Starting anibot daemon supervisor..."
         sleep 10
     done
 ) &
+ANIBOT_PID=$!
 
-# Fallback keep-alive for the container
-tail -f /dev/null
+# Wait for signals
+while true; do
+    sleep 1 &
+    wait $!
+done
 

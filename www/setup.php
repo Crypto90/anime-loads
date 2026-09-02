@@ -51,6 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'cat_hentai' => trim($_POST['cat_hentai'] ?? 'Hentai'),
         'plex_host' => trim($_POST['plex_host'] ?? ''),
         'plex_token' => trim($_POST['plex_token'] ?? ''),
+        'overseerr_url' => rtrim(trim($_POST['overseerr_url'] ?? ''), '/'),
+        'overseerr_api_key' => trim($_POST['overseerr_api_key'] ?? ''),
+        'overseerr_enabled' => isset($_POST['overseerr_enabled']) ? true : false,
+        'overseerr_lang' => trim($_POST['overseerr_lang'] ?? 'german'),
+        'overseerr_res' => trim($_POST['overseerr_res'] ?? '1080p'),
         'web_user' => $_POST['web_user'] ?? 'admin',
         'web_password' => $_POST['web_password'] ?? 'admin',
         'myjd_device' => trim($_POST['myjd_device'] ?? ''),
@@ -76,6 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             file_put_contents($aniFile, json_encode($ani, JSON_PRETTY_PRINT));
         }
     }
+
+    session_start();
+    $_SESSION['user'] = $config['web_user'];
+    $_SESSION['pass'] = $config['web_password'];
 
     header("Location: index.php");
     exit;
@@ -480,6 +489,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <button type="button" class="btn btn-sm btn-outline-info" id="verifyPlexBtn" onclick="verifyPlex()"><i class="bi bi-play-circle"></i> Verify Plex Connection</button>
                     </div>
                     <div id="plex-validation-msg" class="mb-3 text-center" style="display:none; font-weight:bold;"></div>
+
+                    <hr class="border-secondary mb-3">
+                    <p class="text-white-50 small mb-1"><i class="bi bi-collection-play"></i> Overseerr / Jellyseerr Auto-Sync (Optional)</p>
+                    <p class="text-white-50 small mb-3">Automatically pull requested anime from your Overseerr or Jellyseerr server and add them to the download queue.</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small">Overseerr URL (e.g. http://192.168.1.100:5055)</label>
+                            <input type="text" class="form-control form-control-sm" name="overseerr_url" id="overseerr_url" placeholder="">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small">API Key</label>
+                            <input type="password" class="form-control form-control-sm" name="overseerr_api_key" id="overseerr_api_key" placeholder="">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="overseerr_enabled" name="overseerr_enabled">
+                                <label class="form-check-label small" for="overseerr_enabled">Enable Auto-Sync (every 15 mins)</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-info" id="verifyOverseerrBtn" onclick="verifyOverseerr()"><i class="bi bi-link-45deg"></i> Verify Connection</button>
+                        </div>
+                    </div>
+                    <div id="overseerr-validation-msg" class="mb-3 text-center" style="display:none; font-weight:bold;"></div>
                 </div>
 
                 <div class="d-flex justify-content-between mt-3">
@@ -753,6 +788,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-play-circle"></i> Verify Plex Connection';
+    }
+
+    async function verifyOverseerr() {
+        const url = document.getElementById('overseerr_url').value.trim();
+        const apiKey = document.getElementById('overseerr_api_key').value.trim();
+        const msg = document.getElementById('overseerr-validation-msg');
+        const btn = document.getElementById('verifyOverseerrBtn');
+
+        if (!url || !apiKey) {
+            alert("Please enter both Overseerr URL and API Key to verify.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Verifying...';
+        msg.style.display = 'none';
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'verify_overseerr');
+            formData.append('url', url);
+            formData.append('api_key', apiKey);
+            
+            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if (data.success) {
+                msg.className = "mb-3 text-center text-success-custom";
+                msg.innerHTML = '<i class="bi bi-check-circle"></i> Overseerr connection successful!' + (data.version ? ' (Version: ' + data.version + ')' : '');
+                msg.style.display = 'block';
+            } else {
+                msg.className = "mb-3 text-center text-danger-custom";
+                msg.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.error || "Connection failed.");
+                msg.style.display = 'block';
+            }
+        } catch (e) {
+            msg.className = "mb-3 text-center text-warning-custom";
+            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Network error during verification.';
+            msg.style.display = 'block';
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-link-45deg"></i> Verify Connection';
     }
 
     window.onload = () => {

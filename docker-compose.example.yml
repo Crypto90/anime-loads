@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  anime-loads:
+    build: .
+    image: anime-loads-universal:latest
+    container_name: anime-loads
+    ports:
+      - "8080:80"
+    volumes:
+      # Persistent configuration, database, and sequential queue files
+      - ./config:/config
+      # Staging directory where JDownloader downloads and extracts archives
+      - /path/to/downloads:/downloads
+      # Final media library directory where completed anime is moved for Plex/Jellyfin
+      - /path/to/media:/video
+    environment:
+      - TZ=Europe/Berlin
+    restart: unless-stopped

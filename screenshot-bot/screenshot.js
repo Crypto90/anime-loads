@@ -33,6 +33,11 @@ const fs = require('fs');
         await new Promise(r => setTimeout(r, 1000));
         await page.screenshot({ path: path.join(screenshotsDir, 'folder_manager.png') });
 
+        // 6. Diagnostics
+        await page.goto('http://localhost:8080/test.php', { waitUntil: 'domcontentloaded' });
+        await new Promise(r => setTimeout(r, 1000));
+        await page.screenshot({ path: path.join(screenshotsDir, 'diagnostics.png') });
+
         console.log("Screenshots captured successfully!");
     } catch (e) {
         console.error("Error capturing screenshots:", e);
