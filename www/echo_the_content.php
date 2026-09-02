@@ -5,11 +5,25 @@ if (!file_exists($configFile)) {
     exit;
 }
 $config = json_decode(file_get_contents($configFile), true);
-$base_dir = $config['base_dir'];
+$base_dir = $config['base_dir'] ?? '/usr/src/app';
+
+session_start();
+$conf_user = $config['web_user'] ?? 'admin';
+$conf_pass = $config['web_password'] ?? 'admin';
+if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || !isset($_SESSION['pass']) || $_SESSION['pass'] !== $conf_pass) {
+    session_write_close();
+    http_response_code(401);
+    die("Unauthorized");
+}
+session_write_close();
 
 error_reporting(E_ERROR | E_PARSE);
 header('Access-Control-Allow-Origin: *');
 header("Content-type: text/plain");
+
+$aniJsonPath = file_exists('/config/ani.json') ? '/config/ani.json' : ($base_dir . '/ani.json');
+$queueFilePath = (is_dir('/config') && file_exists('/config/queue.txt')) ? '/config/queue.txt' : 'queue.txt';
+$requestLogPath = (is_dir('/config') && file_exists('/config/requestlog.txt')) ? '/config/requestlog.txt' : 'requestlog.txt';
 
 	//
 	// Converts Bashoutput to colored HTML
@@ -35,14 +49,12 @@ header("Content-type: text/plain");
 
 
 	if ($_GET['file'] == 1) {
-		echo convertBash(file_get_contents($base_dir . '/manualOutput.log'));
+		echo convertBash(file_exists($base_dir . '/manualOutput.log') ? file_get_contents($base_dir . '/manualOutput.log') : '');
 	} else if ($_GET['file'] == 10) {
-		echo convertBash(file_get_contents($base_dir . '/docker_live_output.log'));
+		echo convertBash(file_exists($base_dir . '/docker_live_output.log') ? file_get_contents($base_dir . '/docker_live_output.log') : '');
 	} else if ($_GET['file'] == 2) {
 		
-		
-		
-		$json=file_get_contents($base_dir . "/ani.json");
+		$json = file_exists($aniJsonPath) ? file_get_contents($aniJsonPath) : '{"anime":[]}';
 		$data =  json_decode($json);
 
 		 if (count($data->anime)) {
@@ -58,7 +70,6 @@ header("Content-type: text/plain");
 				$coverToDisplay = '';
 				/*if (!file_exists('./anime_cover/'.$urlName.'.png')) {
 					$url = 'https://www.anisearch.de/anime/index/page-1?char=all&text=' . $urlName . '&smode=1&sort=date&order=asc&view=2&kev=7478ce6e';
-					//$url = 'https://www.anisearch.de/anime/index?text=' . $urlName . '&char=all&q=true&sort=date&order=asc&view=2';
 					$options = array(
 							CURLOPT_RETURNTRANSFER => 1, 
 							CURLOPT_USERAGENT      => "Mozilla/5.0",  
@@ -68,94 +79,86 @@ header("Content-type: text/plain");
 							CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0',
 							CURLOPT_REFERER => 'https://www.anisearch.de/',
 							//CURLOPT_PROXY => '213.136.89.121:80',
-					);
-			
-					$ch      = curl_init( $url );
-					curl_setopt_array( $ch, $options );
-					$htmlContent = curl_exec( $ch );
-					curl_close( $ch );
-			
-					$doc = new DOMDocument();
-					libxml_use_internal_errors(true);
-					$doc->loadHTML($htmlContent);
-					libxml_clear_errors();
-			
-					$detailsRedirectCoverURL = '';
-					$gotElement = $doc->getElementById("details-cover");
-					if ($gotElement != NULL) {
-						$detailsRedirectCoverURL = $doc->getElementById("details-cover")->getAttribute('src');
-					}
-				
-					$resultsCoverURL = '';
-			
-				
-					$xpath = new DomXPath($doc);
-
-					$images = [];
-					foreach ($xpath->query("//th[contains(@class, 'showpop')]") as $img) {
-						if ($img->hasAttribute('data-tooltip')) {
-							//echo '<pre>';
-							//var_dump($img->getAttribute('data-tooltip'));
-							//echo '</pre>';
-							//preg_match('/src=\"\((.*)\"\)/', $img->getAttribute('data-tooltip'), $match);
-							preg_match('/< *img[^>]*src *= *["\']?([^"\']*)/i', $img->getAttribute('data-tooltip'), $match);
-
-							if (isset($match[1])) $images[] = trim($match[1], '\'" ');
-						}
-					}
-
-			
-					if ($images[0] != NULL) {
-						$resultsCoverURL = $images[0];
-					}
-			
-				
-					if ($detailsRedirectCoverURL != '') {
-						$coverToDisplay = $detailsRedirectCoverURL;
-					} else if ($resultsCoverURL != '') {
-						$coverToDisplay = $resultsCoverURL;
-					}
-			
-			
-					//save image url to folder for local display
-					if ($coverToDisplay != '') {
-						//file_put_contents(('./anime_cover/'.$urlName.'.png'), file_get_contents($coverToDisplay));
-						// file handler
-						$file = fopen('./anime_cover/'.$urlName.'.png', 'w');
-						// cURL
-						$ch = curl_init();
-						curl_setopt($ch, CURLOPT_URL, $coverToDisplay);
-						//curl_setopt($ch, CURLOPT_PROXY, '213.136.89.121:80');
-						// set cURL options
-						curl_setopt($ch, CURLOPT_FAILONERROR, true);
-						curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-						curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-						curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0');
-						// set file handler option
-						curl_setopt($ch, CURLOPT_FILE, $file);
-						// execute cURL
-						curl_exec($ch);
-						// close cURL
+						);
+						$ch = curl_init($url);
+						curl_setopt_array($ch, $options);
+						$htmlContent = curl_exec($ch);
 						curl_close($ch);
-						// close file
-						fclose($file);
-					}
+						
+						// a new dom object
+						$doc = new DOMDocument();
+						libxml_use_internal_errors(true);
+						$doc->loadHTML($htmlContent);
+						libxml_clear_errors();
+						
+						$detailsRedirectCoverURL = '';
+						$gotElement = $doc->getElementById("details-cover");
+						if ($gotElement != NULL) {
+							$detailsRedirectCoverURL = $gotElement->getAttribute('src');
+						}
+						
+						
+						$resultsCoverURL = '';
+						$xpath = new DomXPath($doc);
+						$images = [];
+						foreach ($xpath->query("//th[contains(@class, 'showpop')]") as $img) {
+							if ($img->hasAttribute('data-tooltip')) {
+								$images[] = $img->getAttribute('data-tooltip');
+							}
+						}
+						if ($images[0] != NULL) {
+							$resultsCoverURL = $images[0];
+							preg_match('/< *img[^>]*src *= *["\']?([^"\']*)/i', $resultsCoverURL, $imgSrc);
+							$resultsCoverURL = $imgSrc[1];
+						}
+						
+						$coverToDisplay = $resultsCoverURL;
+						if ($detailsRedirectCoverURL != '') {
+							$coverToDisplay = $detailsRedirectCoverURL;
+						}
+						
+						
+						if ($coverToDisplay != '') {
+							// open file for writing
+							$file = fopen('./anime_cover/'.$urlName.'.png', 'w');
+							// cURL-Session initialisieren
+							$ch = curl_init();
+							// cURL-Optionen setzen
+							curl_setopt($ch, CURLOPT_URL, $coverToDisplay);
+							curl_setopt($ch, CURLOPT_FAILONERROR, true);
+							curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+							curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+							curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101 Firefox/17.0');
+							curl_setopt($ch, CURLOPT_FILE, $file);
+							// cURL-Session ausführen
+							curl_exec($ch);
+							// close cURL
+							curl_close($ch);
+							// close file
+							fclose($file);
+						}
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+					
+					
 				}*/
-			
-			
-			
-				// Output a row
-				// cover url: https://www.anime-loads.org/files/image/w200-saikin-yatotta-maid-ga-ayashii-cover.jpg
-				$urlName = substr($anime->url, strrpos($anime->url, '/') + 1);
-				//echo '<td style="width: 70%;" ><div class="imageCoverDiv" imageCoverURL="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpg"></div><div class="imageCoverDiv" imageCoverURL="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpeg"></div><div class="imageCoverDiv" imageCoverURL="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.png"></div></td>';
-				//echo '<td style="width: 70%;" ><img src="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpg" /><img src="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.jpeg" /><img src="https://www.anime-loads.org/files/image/w200-' . $urlName . '-cover.png" /></td>';
 				
-			
+				
+				
+				
 				$flag = 'germany';
 				if (strpos($anime->customPackage, 'japanese') !== false) {
 					$flag = 'japan';
 				}
-			
+				
 				$maxEpisodesSaved = $anime->maxEpisodes;
 				if ($maxEpisodesSaved == 1337) {
 					$maxEpisodesSaved = 1;
@@ -163,80 +166,71 @@ header("Content-type: text/plain");
 				$anisearchUrl = $anime->anisearchUrl;
 				$number = preg_match('/\d+$/', $anisearchUrl, $matches);
 				$anisearchId = $matches[0];
-			
-			
+				
+				
 				$completedGreenBGStyle = '';
-			
+				
 				if ((strpos($anime->customPackage, 'movie') !== false && $anime->episodes == 1 && count($anime->missing) == 0) || ($anime->episodes == $maxEpisodesSaved && count($anime->missing) == 0)) {
 					$completedGreenBGStyle = 'background-color: rgb(15, 70, 25) !important;';
 				}
 				
-				$releaseUID = "";
-				if ($anime->releaseUID != "") {
-					$releaseUID = "..." . substr($anime->releaseUID, -20);
-				}
-				
-				
-				if (strpos($anime->status, 'Release fehlerhaft') !== false && $releaseUID != "") {
-					$completedGreenBGStyle = 'background-color: rgb(110, 0, 0) !important;';
-				}
-			
 				echo '<div class="card bg-dark text-white mb-3" style="max-width: 373px; float: left; margin: 10px 10px 0 0 !important; height: 210px; width: 374px;' . $completedGreenBGStyle . '">';
 				echo '  <div class="row g-0">';
 				echo '	<div class="col-md-4">';
 				//echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="./anime_cover/'.$urlName.'.png" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
-				echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="getcover.php?url=' . urlencode($anime->coverUrl) . '&id=' . $anisearchId . '&urlName=' . urlencode($urlName) . '" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
-				//echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="' . $anime->coverUrl . '" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
+				echo '	  <img data="' . $anime->url . '" style="width: 124px; height: 175px; cursor: pointer;" src="getcover.php?url=' . $urlName . '&id=' . $anisearchId . '" class="animeCover img-fluid rounded-start" alt="' . $anime->name . '">';
 				echo '	</div>';
 				echo '	<div class="col-md-8">';
-				echo '	  <div class="card-body" style="text-align: left; height: 210px; overflow-y: scroll; scrollbar-width: thin; scrollbar-color: #363e44 #202529;">';
-				echo '		<h5 class="card-title" data="' . $anime->url . '" style="color: lightgrey; cursor: pointer;">' . $anime->name . ' <span style="color: green; font-size: 10px;">(' . $anime->year . ')</span> <br><span style="color: lightblue; font-size: 10px;">ReleaseID: ' . $anime->releaseID . '</span><br><span style="color: lightblue; font-size: 10px;">AniSearchID: ' . $anisearchId . '</span><br><span style="color: lightblue; font-size: 10px;">ReleaseUID: ' . $releaseUID . '</span></h5>';
+				echo '	  <div class="card-body" style="text-align: left; height: 210px; overflow-y: scroll;">';
+				echo '		<h5 class="card-title" data="' . $anime->url . '" style="color: lightgrey; cursor: pointer;">' . $anime->name . ' <span style="color: darkblue; font-size: 10px;">(' . $anime->year . ')</span> <br><span style="color: lightblue; font-size: 10px;">(ReleaseID: ' . $anime->releaseID . ')</span></h5>';
 				echo '	    <p class="card-text" style="color: orange; font-size: 12px;"><i class="bi bi-box-seam"></i> ' . $anime->customPackage . '</p>';
 				echo '	    <p class="card-text" style="font-size: 12px;"><i class="bi bi-calendar-range"></i> Status: ' . $anime->status . '</p>';
 				echo '	    <p class="card-text" style="color: green; font-size: 12px;"><i class="bi bi-file-earmark-check"></i> ' . ($anime->episodes . ' episodes / ' . $maxEpisodesSaved . ' total') . '</p>';
 				echo '	    <p class="card-text" style="color: red; font-size: 12px;"><i class="bi bi-file-earmark-excel"></i> ' . (count($anime->missing) > 0 ? 'Episode # ' . implode(', ', $anime->missing) . ' missing' : '-') . '</p>';
 				echo '	    <button data="?unmonitor=' . urlencode($anime->customPackage) . '" class="unmonitorBtn btn btn-danger btn-sm" style="position: absolute; left: 0; top: 179px; width: 124px; height: 26px; font-size: 10px; padding-top: 5px;">Nicht mehr beobachten</button>';
-				echo '	    <img src="' . $flag . '.png" style="position: absolute; bottom:-5px; right: 15px; width: 30px; opacity: 0.5;" />';
+				echo '	    <img src="' . $flag . '.png" style="position: absolute; bottom: 0; right: 0; width: 30px; opacity: 0.5;" />';
 				echo '	  </div>';
 				echo '	</div>';
 				echo '  </div>';
 				echo '</div>';
+				
+				
+				
+				
 				$reverseIndex--;
 			}
 			echo '</div>';
-			
-			
-			
 		
 		}
-
-				
 		
 		
 		
-	} else if ($_GET['file'] == 3) {
-		echo file_get_contents($base_dir . '/downloading_and_monitoring.txt');
-	} else if ($_GET['file'] == 4) {
-		echo file_get_contents($base_dir . '/no_releases_found_log.txt');
+		
+		
+		
+		
+	} else if ($_GET['file'] == 76) {
+		echo file_exists($base_dir . '/no_releases_found_log.txt') ? file_get_contents($base_dir . '/no_releases_found_log.txt') : '';
 	} else if ($_GET['file'] == 77) {
-		echo file_get_contents('queue.txt');
+		echo file_exists($queueFilePath) ? file_get_contents($queueFilePath) : '';
 	} else if ($_GET['file'] == 78) {
-		//echo file_get_contents('requestlog.txt');
-		$logFilePath = 'requestlog.txt'; // Replace this with the path to your log file
+		$logFilePath = $requestLogPath;
 
 		$lines = [];
 		$linesToRead = 10;
 
-		// Read the file line by line
-		$file = new SplFileObject($logFilePath);
-		$file->seek(PHP_INT_MAX); // Move the pointer to the end of the file
-		
-		$aniJsonContent = file_get_contents($base_dir . '/ani.json');
-		
-		// Start from the end of the file and store lines in an array
-		while ($file->key() > 0 && count($lines) < $linesToRead) {
-			$file->seek($file->key() - 1);
-			array_unshift($lines, $file->current());
+		// Read the file line by line if it exists
+		if (file_exists($logFilePath)) {
+			$file = new SplFileObject($logFilePath);
+			$file->seek(PHP_INT_MAX); // Move the pointer to the end of the file
+			
+			$aniJsonContent = file_exists($aniJsonPath) ? file_get_contents($aniJsonPath) : '';
+			
+			// Start from the end of the file and store lines in an array
+			while ($file->key() > 0 && count($lines) < $linesToRead) {
+				$file->seek($file->key() - 1);
+				array_unshift($lines, $file->current());
+			}
 		}
 		
 		

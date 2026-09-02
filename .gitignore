@@ -1,9 +1,19 @@
 settings.json
 ani.json
+ani_paused.json
 chromedriver.exe
 geckodriver.exe
 jdtest.py
 config/
+downloads/
+video/
+
+# Logs & Temporary files
+*.log
+*.tmp
+queue.txt
+requestlog.txt
+test_exec*
 
 # Development / Screenshot tooling
 dummy_ani.json
@@ -11,10 +21,14 @@ dummy_config.json
 mock_jd_backend.py
 refactor.py
 test.py
+node_modules/
 screenshot-bot/node_modules/
 
 # IDE & OS
 .idea/
+.vscode/
 __pycache__/
 *.pyc
+*.pyo
 .DS_Store
+Thumbs.db

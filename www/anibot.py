@@ -287,14 +287,14 @@ def editconfig():
         jfile = open(botfile, "w")
         jfile.write(json.dumps(data, indent=4, sort_keys=True))
         jfile.flush()
-        jfile.close
+        jfile.close()
     else:
         settingsdata = {"settings": settingsdata}
         os.makedirs(os.path.dirname(botfolder), exist_ok=True)
         jfile = open(botfile, "w")
         jfile.write(json.dumps(settingsdata, indent=4, sort_keys=True))
         jfile.flush()
-        jfile.close
+        jfile.close()
 
 def addAnime():
     jdhost, hoster, browser, browserlocation, pushkey, timedelay, myjd_user, myjd_pass, myjd_device,jd_deprecated, jd_deprecatedport, al_user, al_pass = loadconfig()
@@ -720,12 +720,17 @@ def startbot():
         data = json.load(f)
         f.close()
       
-        anidata = ""
+        anidata = []
         try:
-            anidata = data['anime']
-        except:
-            print("Du hast keine Anime in deiner Liste")
-            return
+            anidata = data.get('anime', [])
+        except Exception:
+            anidata = []
+
+        if not anidata:
+            print("Du hast aktuell keine Anime in deiner Liste. Warte auf Einträge...")
+            delay = timedelay if (isinstance(timedelay, (int, float)) and timedelay > 0) else 15
+            time.sleep(delay)
+            continue
 
         if(anidata != ""):
             for idx, animeentry in enumerate(anidata):
@@ -761,7 +766,7 @@ def startbot():
                                 jfile = open(botfile, "w")
                                 jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
                                 jfile.flush()
-                                jfile.close
+                                jfile.close()
                     continue
                 missingEpisodes = animeentry['missing']
                 episodes = animeentry['episodes']
@@ -811,7 +816,7 @@ def startbot():
                                         jfile = open(botfile, "w")
                                         jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
                                         jfile.flush()
-                                        jfile.close
+                                        jfile.close()
                                 
                             
                         else:
@@ -836,7 +841,7 @@ def startbot():
                                 jfile = open(botfile, "w")
                                 jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
                                 jfile.flush()
-                                jfile.close
+                                jfile.close()
                 elif(int(episodes) < curEpisodes):
                     log("[INFO] " + name + " hat neue Episode, lade herunter...", pb)
                     for i in range(episodes + 1, curEpisodes + 1):
@@ -872,7 +877,7 @@ def startbot():
                                         jfile = open(botfile, "w")
                                         jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
                                         jfile.flush()
-                                        jfile.close
+                                        jfile.close()
                         else:
                             # FIX: Episodenzähler wird bei fehlgeschlagenem Download NICHT mehr erhöht.
                             # So wird im nächsten Loop direkt am Fehlerpunkt weitergemacht und das "Läd erst beim 2. Mal"-Verhalten korrigiert.
@@ -899,7 +904,7 @@ def startbot():
                                 jfile = open(botfile, "w")
                                 jfile.write(json.dumps(reloaded_data, indent=4, sort_keys=True))
                                 jfile.flush()
-                                jfile.close
+                                jfile.close()
                     
                     
                 #else:

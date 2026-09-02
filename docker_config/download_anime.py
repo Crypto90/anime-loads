@@ -30,25 +30,18 @@ import queue
 # german or ger
 
 
-#remove a download entry from anime-loads docker config:
-# docker exec -i pfuenzle-anime-loads1 python anibot.py --configfile /config/ani.json remove
-
-RUNNING_DOCKER_CONTAINER="pfuenzle-anime-loads1"
-
-
-
-
+# To remove an entry: python3 anibot.py --configfile /config/ani.json remove
 
 CRED = '\033[33m'
 CEND = '\033[0m'
 
-RELEASE_ID_TO_DOWNLOAD=0
-RELEASE_SELECTED=False
-GOT_FIRST_EXIT_MESSAGE=False
-SEARCH_RESULTS_FOUND=False
-SEARCH_RESULT_TYPE="tv"
-SKIP_EPISODES=0
-DRY_RUN=False
+RELEASE_ID_TO_DOWNLOAD = 0
+RELEASE_SELECTED = False
+GOT_FIRST_EXIT_MESSAGE = False
+SEARCH_RESULTS_FOUND = False
+SEARCH_RESULT_TYPE = "tv"
+SKIP_EPISODES = 0
+DRY_RUN = False
 
 
 def reader(pipe, queue):
@@ -60,10 +53,8 @@ def reader(pipe, queue):
         queue.put(None)
 
 
-
-
-
-p = Popen(shlex.split("docker exec -i " + RUNNING_DOCKER_CONTAINER + " python anibot.py --configfile /config/ani.json add"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, bufsize=0)
+ANIBOT_PATH = "/var/www/html/anibot.py" if os.path.isfile("/var/www/html/anibot.py") else "anibot.py"
+p = Popen([sys.executable, "-u", ANIBOT_PATH, "--configfile", "/config/ani.json", "add"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, bufsize=0)
 q = queue.Queue()
 
 Thread(target=reader, args=[p.stdout, q]).start()

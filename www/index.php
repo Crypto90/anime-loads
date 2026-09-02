@@ -5,15 +5,143 @@ if (!file_exists($configFile)) {
     exit;
 }
 $config = json_decode(file_get_contents($configFile), true);
-$base_dir = $config['base_dir'];
+$base_dir = $config['base_dir'] ?? '/usr/src/app';
 
-// index.php
+// Standardized Persistent File Paths
+$jsonFile = file_exists('/config/ani.json') ? '/config/ani.json' : ($base_dir . '/ani.json');
+$pausedFile = file_exists('/config/ani_paused.json') ? '/config/ani_paused.json' : ($base_dir . '/ani_paused.json');
+$queueFile = is_dir('/config') ? '/config/queue.txt' : 'queue.txt';
+$requestLogFile = is_dir('/config') ? '/config/requestlog.txt' : 'requestlog.txt';
+
 error_reporting(E_ERROR | E_PARSE);
 set_time_limit(0);
 header('Access-Control-Allow-Origin: *');
 session_start();
 
-// --- 1. Actions & API Endpoints ---
+function liveExecuteCommand($cmd, $echoLive = false) {
+    while (@ob_end_flush());
+    $proc = popen("$cmd 2>&1 ; echo Exit status : $?", 'r');
+    $live_output = "";
+    $complete_output = "";
+    while (!feof($proc)) {
+        $live_output = fread($proc, 4096);
+        $complete_output = $complete_output . $live_output;
+        if ($echoLive) { echo "$live_output"; }
+        @flush();
+    }
+    pclose($proc);
+    preg_match('/[0-9]+$/', $complete_output, $matches);
+    return array('exit_status' => intval($matches[0] ?? 0), 'output' => str_replace("Exit status : " . ($matches[0] ?? ''), '', $complete_output));
+}
+
+// --- Authentication & Session Validation ---
+$user = $_POST['user'] ?? '';
+$pass = $_POST['pass'] ?? '';
+$userGET = $_GET['user'] ?? '';
+$passGET = $_GET['pass'] ?? '';
+
+$conf_user = $config['web_user'] ?? 'admin';
+$conf_pass = $config['web_password'] ?? 'admin';
+
+$is_authenticated = false;
+if (($user === $conf_user && $pass === $conf_pass) || 
+    ($userGET === $conf_user && $passGET === $conf_pass) || 
+    (isset($_SESSION['user']) && $_SESSION['user'] === $conf_user && $_SESSION['pass'] === $conf_pass)) {
+    $_SESSION['user'] = $conf_user;
+    $_SESSION['pass'] = $conf_pass;
+    $is_authenticated = true;
+}
+
+// Local Queue Processing Cron Exemption
+if (isset($_GET['processqueue']) && $_GET['processqueue'] != '') {
+    $clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
+    $isLocal = in_array($clientIp, ['127.0.0.1', '::1']);
+    if (!$is_authenticated && !$isLocal) {
+        http_response_code(403);
+        die("Forbidden");
+    }
+
+    $pids = trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
+    if ($pids == '') {
+        $file = $queueFile;
+        $contents = file_exists($file) ? file_get_contents($file) : '';
+        $lines = array_values(array_filter(explode("\n", $contents), function($l) { return trim($l) !== ''; }));
+        if (count($lines) > 0) {
+            $firstLine = trim(array_shift($lines));
+            file_put_contents($file, count($lines) > 0 ? implode("\n", $lines) . "\n" : "");
+            
+            if ($firstLine != '') {
+                $firstLineParameterArray = explode(";", $firstLine);
+                $animeTitel = $firstLineParameterArray[0] ?? '';
+                $languageselect = $firstLineParameterArray[1] ?? 'german';
+                $resolutionselect = $firstLineParameterArray[2] ?? '1080p';
+                $forceAnimeResult = $firstLineParameterArray[3] ?? '0';
+                $forceAnimeRelease = $firstLineParameterArray[4] ?? '0';
+                $skipEpisodes = $firstLineParameterArray[5] ?? '0';
+                $DRYRUN = $firstLineParameterArray[6] ?? '0';
+                
+                file_put_contents($base_dir . '/manualOutput.log', '');
+                $cmd = 'cd ' . escapeshellarg($base_dir) . ' && PATH=/usr/local/bin:$PATH python3 -u download_anime.py ' . escapeshellarg($animeTitel) . ' ' . escapeshellarg($languageselect) . ' ' . escapeshellarg($resolutionselect) . ' ' . escapeshellarg($forceAnimeResult) . ' ' . escapeshellarg($forceAnimeRelease) . ' ' . escapeshellarg($skipEpisodes) . ' ' . escapeshellarg($DRYRUN) . ' > ' . escapeshellarg($base_dir . '/manualOutput.log') . ' 2>&1 &';
+                liveExecuteCommand($cmd);
+                
+                if (strpos($animeTitel, 'http') !== false && strpos($animeTitel, '/media/') !== false) {
+                    $animeTitel = explode("/media/", $animeTitel)[1];
+                }
+                
+                $statusMsg = ($DRYRUN == '1') ? "DRY RUN (KEIN DOWNLOAD) Prozess gestartet [" . $animeTitel . "]... Es dauert etwa 60 Sekunden bis es weiter geht..." : "Prozess gestartet [" . $animeTitel . "]... Es dauert etwa 60 Sekunden bis es weiter geht...";
+                file_put_contents($base_dir . "/manualOutput.log", $statusMsg);
+            }
+        }
+    }
+    die();
+}
+
+// Block unauthenticated access to actions and dashboard
+if (!$is_authenticated) {
+    if (isset($_POST['action']) || isset($_GET['action']) || isset($_GET['unmonitor']) || isset($_GET['downloader']) || isset($_GET['killrequest'])) {
+        http_response_code(401);
+        die("Unauthorized");
+    }
+    ?>
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Anime-Loads Downloader - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Inter', -apple-system, sans-serif; }
+        .panel { background-color: #161b22; border: 1px solid #30363d; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center vh-100" style="background-color: #0d1117;">
+    <div class="panel" style="width: 400px;">
+        <div class="p-4 border-bottom border-secondary bg-black text-center" style="border-radius: 12px 12px 0 0;">
+            <h4 class="mb-0 text-white fw-bold"><i class="bi bi-cloud-arrow-down-fill text-primary me-2"></i>Anime-Loads</h4>
+        </div>
+        <div class="p-4">
+            <form method="POST" action="index.php">
+                <div class="mb-3">
+                    <label class="mb-2">Username</label>
+                    <input type="text" name="user" class="form-control" required>
+                </div>
+                <div class="mb-4">
+                    <label class="mb-2">Password</label>
+                    <input type="password" name="pass" class="form-control" required>
+                </div>
+                <button type="submit" name="submit" class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-box-arrow-in-right me-2"></i>Sign In</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+    <?php
+    exit;
+}
+
+// --- Authenticated Actions & API Endpoints ---
 
 if (isset($_GET['action']) && $_GET['action'] == "logout") {
 	session_destroy();
@@ -23,8 +151,8 @@ if (isset($_GET['action']) && $_GET['action'] == "logout") {
 
 // Background Cover Scraper
 if (isset($_POST['action']) && $_POST['action'] == "scrape_cover") {
-    $urlName = $_POST['urlName'];
-    $url = 'https://www.anisearch.de/anime/index/page-1?char=all&text=' . $urlName . '&smode=1&sort=date&order=asc&view=2&kev=7478ce6e';
+    $urlName = basename($_POST['urlName'] ?? '');
+    $url = 'https://www.anisearch.de/anime/index/page-1?char=all&text=' . urlencode($urlName) . '&smode=1&sort=date&order=asc&view=2&kev=7478ce6e';
     $options = array(
         CURLOPT_RETURNTRANSFER => 1, 
         CURLOPT_USERAGENT      => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",  
@@ -81,24 +209,23 @@ if (isset($_POST['action']) && $_POST['action'] == 'redownload_episode') {
     $ep = intval($_POST['ep']);
     $force = isset($_POST['force']) && $_POST['force'] == '1';
 
-    $jsonFile = $base_dir . '/ani.json';
-    $pausedFile = $base_dir . '/ani_paused.json';
-    
     $foundAnime = null;
     $targetFile = null;
 
     // Check active file
-    $data = json_decode(file_get_contents($jsonFile), true);
-    if (isset($data['anime'])) {
-        foreach ($data['anime'] as &$arr) {
-            if ($arr['customPackage'] === $package) {
-                if (!in_array($ep, $arr['missing'])) { $arr['missing'][] = $ep; sort($arr['missing']); }
-                $foundAnime = $arr;
-                $targetFile = $jsonFile;
-                break;
+    if (file_exists($jsonFile)) {
+        $data = json_decode(file_get_contents($jsonFile), true);
+        if (isset($data['anime'])) {
+            foreach ($data['anime'] as &$arr) {
+                if ($arr['customPackage'] === $package) {
+                    if (!in_array($ep, $arr['missing'])) { $arr['missing'][] = $ep; sort($arr['missing']); }
+                    $foundAnime = $arr;
+                    $targetFile = $jsonFile;
+                    break;
+                }
             }
+            if ($targetFile) file_put_contents($jsonFile, json_encode($data, JSON_PRETTY_PRINT));
         }
-        if ($targetFile) file_put_contents($jsonFile, json_encode($data, JSON_PRETTY_PRINT));
     }
 
     // Check paused file if not found
@@ -126,8 +253,8 @@ if (isset($_POST['action']) && $_POST['action'] == 'redownload_episode') {
         $pids = trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
         if ($pids != '') {
             $formDataLine = "$title;$lang;$res;0;0;0;0\n";
-            file_put_contents('queue.txt', $formDataLine, FILE_APPEND);
-            file_put_contents('requestlog.txt', $formDataLine, FILE_APPEND);
+            file_put_contents($queueFile, $formDataLine, FILE_APPEND);
+            file_put_contents($requestLogFile, $formDataLine, FILE_APPEND);
             die("QUEUED");
         } else {
             $logFile = $base_dir . '/manualOutput.log';
@@ -142,29 +269,29 @@ if (isset($_POST['action']) && $_POST['action'] == 'redownload_episode') {
 // Toggle Pause Status Endpoint
 if (isset($_POST['action']) && $_POST['action'] == 'toggle_pause') {
     $package = $_POST['package'];
-    $jsonFile = $base_dir . '/ani.json';
-    $pausedFile = $base_dir . '/ani_paused.json';
     
     if (!file_exists($pausedFile)) file_put_contents($pausedFile, json_encode(['anime' => []]));
     
-    $data = json_decode(file_get_contents($jsonFile), true) ?: ['anime' => []];
-    $pausedData = json_decode(file_get_contents($pausedFile), true) ?: ['anime' => []];
+    $data = file_exists($jsonFile) ? (json_decode(file_get_contents($jsonFile), true) ?: ['anime' => []]) : ['anime' => []];
+    $pausedData = file_exists($pausedFile) ? (json_decode(file_get_contents($pausedFile), true) ?: ['anime' => []]) : ['anime' => []];
     
     $found = false;
     // 1. Is it active? Move to paused.
-    foreach ($data['anime'] as $k => $arr) {
-        if ($arr['customPackage'] === $package) {
-            $arr['paused'] = true;
-            $pausedData['anime'][] = $arr;
-            unset($data['anime'][$k]);
-            $data['anime'] = array_values($data['anime']);
-            $found = true;
-            break;
+    if (isset($data['anime'])) {
+        foreach ($data['anime'] as $k => $arr) {
+            if ($arr['customPackage'] === $package) {
+                $arr['paused'] = true;
+                $pausedData['anime'][] = $arr;
+                unset($data['anime'][$k]);
+                $data['anime'] = array_values($data['anime']);
+                $found = true;
+                break;
+            }
         }
     }
     
     // 2. Is it paused? Move to active.
-    if (!$found) {
+    if (!$found && isset($pausedData['anime'])) {
         foreach ($pausedData['anime'] as $k => $arr) {
             if ($arr['customPackage'] === $package) {
                 unset($arr['paused']);
@@ -197,30 +324,31 @@ if (isset($_GET['action']) && $_GET['action'] == "jd_data") {
 
 $jd_actions = ['jd_start', 'jd_pause', 'jd_stop', 'jd_delete', 'jd_reset', 'jd_force', 'jd_extract', 'jd_resume', 'jd_enable', 'jd_disable', 'jd_update', 'jd_speedlimit'];
 if (isset($_POST['action']) && in_array($_POST['action'], $jd_actions)) {
-    $pythonCmd = "";
     $action = $_POST['action'];
+    $pyAction = "";
+    $pyArg = "";
     
-    if ($action == 'jd_start') $pythonCmd = "start";
-    if ($action == 'jd_pause') $pythonCmd = "pause";
-    if ($action == 'jd_stop')  $pythonCmd = "stop";
-    if ($action == 'jd_update') $pythonCmd = "update";
+    if ($action == 'jd_start')  $pyAction = "start";
+    if ($action == 'jd_pause')  $pyAction = "pause";
+    if ($action == 'jd_stop')   $pyAction = "stop";
+    if ($action == 'jd_update') $pyAction = "update";
     
     if (in_array($action, ['jd_delete', 'jd_reset', 'jd_force', 'jd_extract', 'jd_resume', 'jd_enable', 'jd_disable'])) {
-        $id = escapeshellarg($_POST['id']);
         $cmdMap = [
             'jd_delete' => 'delete', 'jd_reset' => 'reset', 'jd_force' => 'force',
             'jd_extract' => 'extract', 'jd_resume' => 'resume', 'jd_enable' => 'enable', 'jd_disable' => 'disable'
         ];
-        $pythonCmd = $cmdMap[$action] . " " . $id;
+        $pyAction = $cmdMap[$action];
+        $pyArg = preg_replace('/[^0-9,]/', '', $_POST['id'] ?? '');
     }
 
     if ($action == 'jd_speedlimit') {
-        $limit = intval($_POST['limit']);
-        $pythonCmd = "speedlimit $limit";
+        $pyAction = "speedlimit";
+        $pyArg = strval(intval($_POST['limit'] ?? 0));
     }
     
-    if ($pythonCmd !== "") {
-        $cmd = 'cd ' . escapeshellarg($base_dir) . ' && python3 jd_backend.py ' . escapeshellarg($pythonCmd);
+    if ($pyAction !== "") {
+        $cmd = 'cd ' . escapeshellarg($base_dir) . ' && python3 jd_backend.py ' . escapeshellarg($pyAction) . ($pyArg !== '' ? ' ' . escapeshellarg($pyArg) : '');
         shell_exec($cmd);
     }
     die("OK");
@@ -228,11 +356,10 @@ if (isset($_POST['action']) && in_array($_POST['action'], $jd_actions)) {
 
 // Backend Endpoint: Delete File or Folder from Cache/Unpacked
 if (isset($_POST['action']) && $_POST['action'] == "delete_file_item") {
-    $target = trim($_POST['target']);
-    // SECURITY: Use basename() to aggressively prevent directory traversal attacks
-    $safeTarget = escapeshellarg(basename($target));
+    $target = basename(trim($_POST['target'] ?? ''));
+    $safeTarget = escapeshellarg($target);
     
-    if (!empty($safeTarget)) {
+    if (!empty($target)) {
         $searchDirs = escapeshellarg($config['jd_download_dir'] ?? '');
         if (!empty($config['jd_extraction_dir'])) {
             $searchDirs .= " " . escapeshellarg($config['jd_extraction_dir']);
@@ -251,70 +378,61 @@ if (isset($_POST['action']) && $_POST['action'] == "delete_file_item") {
     die();
 }
 
-if (isset($_GET['processqueue']) && $_GET['processqueue'] != '') {
-    $pids = trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
-	if ($pids == '') {
-		$file = 'queue.txt';
-		$contents = file_get_contents($file);
-		$lines = explode("\n", $contents);
-		$firstLine = trim(array_shift($lines));
-		file_put_contents($file, implode("\n", $lines));
-		
-		if ($firstLine == '') die();
+// Form Submission: New Download Request
+if (isset($_POST['animeTitel']) && trim($_POST['animeTitel']) !== '') {
+    $animeTitel = trim($_POST['animeTitel']);
+    if (isset($_POST['ISHENTAI'])) {
+        $animeTitel = "HENTAI_" . $animeTitel;
+    }
+    $languageselect = $_POST['languageselect'] ?? 'german';
+    $resolutionselect = $_POST['resolutionselect'] ?? '1080p';
+    $forceAnimeResult = !empty($_POST['forceAnimeResult']) ? intval($_POST['forceAnimeResult']) : 0;
+    $forceAnimeRelease = !empty($_POST['forceAnimeRelease']) ? intval($_POST['forceAnimeRelease']) : 0;
+    $skipEpisodes = !empty($_POST['skipEpisodes']) ? intval($_POST['skipEpisodes']) : 0;
+    $DRYRUN = isset($_POST['DRYRUN']) ? 1 : 0;
 
-		$firstLineParameterArray = explode(";", $firstLine);
-		$animeTitel = $firstLineParameterArray[0];
-    	$languageselect = $firstLineParameterArray[1];
-    	$resolutionselect = $firstLineParameterArray[2];
-    	$forceAnimeResult = $firstLineParameterArray[3];
-    	$forceAnimeRelease = $firstLineParameterArray[4];
-    	$skipEpisodes = $firstLineParameterArray[5];
-    	$DRYRUN = $firstLineParameterArray[6];
-        
-    	file_put_contents($base_dir . '/manualOutput.log', '');
-    	$result = liveExecuteCommand('cd ' . escapeshellarg($base_dir) . ' && PATH=/usr/local/bin:$PATH python3 -u download_anime.py ' . escapeshellarg($animeTitel) . ' ' . escapeshellarg($languageselect) . ' ' . escapeshellarg($resolutionselect) . ' ' . escapeshellarg($forceAnimeResult) . ' ' . escapeshellarg($forceAnimeRelease) . ' ' . escapeshellarg($skipEpisodes) . ' ' . escapeshellarg($DRYRUN) . ' > ' . escapeshellarg($base_dir . '/manualOutput.log') . ' 2>&1 &');
-		
-		if (strpos($animeTitel, 'http') !== false) { $animeTitel = explode("/media/", $animeTitel)[1]; }
-		
-		if ($result['exit_status'] === 0) {
-		   if (isset($_POST['DRYRUN'])) {
-		       file_put_contents($base_dir . "/manualOutput.log", "DRY RUN (KEIN DOWNLOAD) Prozess gestartet [" . $animeTitel . "]... Es dauert etwa 60 Sekunden bis es weiter geht...");
-		   } else {
-		       file_put_contents($base_dir . "/manualOutput.log", "Prozess gestartet [" . $animeTitel . "]... Es dauert etwa 60 Sekunden bis es weiter geht...");
-		   }
-		} else {
-		    file_put_contents($base_dir . "/manualOutput.log", "Prozess konnte nicht gestartet werden!");
-		}
-	}
-	die();
+    $pids = trim(shell_exec("ps ux | grep 'download_anime.py' | grep -v grep"));
+    $formDataLine = "$animeTitel;$languageselect;$resolutionselect;$forceAnimeResult;$forceAnimeRelease;$skipEpisodes;$DRYRUN\n";
+    if ($pids != '') {
+        file_put_contents($queueFile, $formDataLine, FILE_APPEND);
+        file_put_contents($requestLogFile, $formDataLine, FILE_APPEND);
+    } else {
+        file_put_contents($requestLogFile, $formDataLine, FILE_APPEND);
+        file_put_contents($base_dir . '/manualOutput.log', '');
+        $cmd = 'cd ' . escapeshellarg($base_dir) . ' && PATH=/usr/local/bin:$PATH python3 -u download_anime.py ' . escapeshellarg($animeTitel) . ' ' . escapeshellarg($languageselect) . ' ' . escapeshellarg($resolutionselect) . ' ' . escapeshellarg(strval($forceAnimeResult)) . ' ' . escapeshellarg(strval($forceAnimeRelease)) . ' ' . escapeshellarg(strval($skipEpisodes)) . ' ' . escapeshellarg(strval($DRYRUN)) . ' > ' . escapeshellarg($base_dir . '/manualOutput.log') . ' 2>&1 &';
+        liveExecuteCommand($cmd);
+        $displayTitle = (strpos($animeTitel, 'http') !== false && strpos($animeTitel, '/media/') !== false) ? explode("/media/", $animeTitel)[1] : $animeTitel;
+        $statusMsg = ($DRYRUN === 1) ? "DRY RUN (KEIN DOWNLOAD) Prozess gestartet [" . $displayTitle . "]... Es dauert etwa 60 Sekunden bis es weiter geht..." : "Prozess gestartet [" . $displayTitle . "]... Es dauert etwa 60 Sekunden bis es weiter geht...";
+        file_put_contents($base_dir . "/manualOutput.log", $statusMsg);
+    }
 }
 
 if (isset($_GET['unmonitor']) && $_GET['unmonitor'] != '') {
-    $jsonFile = $base_dir . '/ani.json';
-    $pausedFile = $base_dir . '/ani_paused.json';
-    
+    $unmonTarget = $_GET['unmonitor'];
     // Remove from active
-    $data = json_decode(file_get_contents($jsonFile), true);
-    if ($data) {
-        foreach ($data['anime'] as $k => $arr) {
-            if ($arr["customPackage"] == $_GET['unmonitor']) { 
-                unset($data['anime'][$k]); 
-                $urlName = substr($arr['url'], strrpos($arr['url'], '/') + 1);
-                if (file_exists('./anime_cover/'.$urlName.'.png')) unlink('./anime_cover/'.$urlName.'.png');
-            }
-        }   
-        $data['anime'] = array_values($data['anime']);
-        file_put_contents($jsonFile, json_encode($data, JSON_PRETTY_PRINT));
+    if (file_exists($jsonFile)) {
+        $data = json_decode(file_get_contents($jsonFile), true);
+        if ($data && isset($data['anime'])) {
+            foreach ($data['anime'] as $k => $arr) {
+                if ($arr["customPackage"] == $unmonTarget) { 
+                    unset($data['anime'][$k]); 
+                    $urlName = basename($arr['url']);
+                    if (file_exists('./anime_cover/'.$urlName.'.png')) unlink('./anime_cover/'.$urlName.'.png');
+                }
+            }   
+            $data['anime'] = array_values($data['anime']);
+            file_put_contents($jsonFile, json_encode($data, JSON_PRETTY_PRINT));
+        }
     }
     
     // Remove from paused
     if (file_exists($pausedFile)) {
         $pData = json_decode(file_get_contents($pausedFile), true);
-        if ($pData) {
+        if ($pData && isset($pData['anime'])) {
             foreach ($pData['anime'] as $k => $arr) {
-                if ($arr["customPackage"] == $_GET['unmonitor']) { 
+                if ($arr["customPackage"] == $unmonTarget) { 
                     unset($pData['anime'][$k]); 
-                    $urlName = substr($arr['url'], strrpos($arr['url'], '/') + 1);
+                    $urlName = basename($arr['url']);
                     if (file_exists('./anime_cover/'.$urlName.'.png')) unlink('./anime_cover/'.$urlName.'.png');
                 }
             }   
@@ -326,8 +444,6 @@ if (isset($_GET['unmonitor']) && $_GET['unmonitor'] != '') {
 }
 
 if (isset($_GET['downloader']) && $_GET['downloader'] == '1') {
-    // Restarting the container from within itself is not natively supported without docker socket.
-    // Instead we could kill lingering python scripts if needed, but for now we do nothing.
     shell_exec("pkill -9 -f 'download_anime.py'");
     header("Refresh:0; url=index.php");
     die();
@@ -398,7 +514,7 @@ if (!empty($config['main_storage_dir']) && file_exists($config['main_storage_dir
 $monitoredNames = [];
 $allAnime = [];
 
-$jsonLib = file_get_contents($base_dir . "/ani.json");
+$jsonLib = file_exists($jsonFile) ? file_get_contents($jsonFile) : '{"anime":[]}';
 $dataLib = json_decode($jsonLib, true);
 if ($dataLib && isset($dataLib['anime'])) {
     foreach ($dataLib['anime'] as $anime) {
@@ -407,7 +523,6 @@ if ($dataLib && isset($dataLib['anime'])) {
     }
 }
 
-$pausedFile = $base_dir . "/ani_paused.json";
 if (file_exists($pausedFile)) {
     $pLib = file_get_contents($pausedFile);
     $pData = json_decode($pLib, true);
@@ -1185,18 +1300,6 @@ $allAnimeObjects = json_decode(json_encode($allAnime));
 </div>
 
 <?php
-$user = $_POST['user'] ?? '';
-$pass = $_POST['pass'] ?? '';
-$userGET = $_GET['user'] ?? '';
-$passGET = $_GET['pass'] ?? '';
-
-$conf_user = $config['web_user'] ?? 'admin';
-$conf_pass = $config['web_password'] ?? 'admin';
-
-if (($user == $conf_user && $pass == $conf_pass) || ($userGET == $conf_user && $passGET == $conf_pass) || (isset($_SESSION['user']) && $_SESSION['user'] == $conf_user && $_SESSION['pass'] == $conf_pass)) {
-	$_SESSION['user'] = $conf_user;
-    $_SESSION['pass'] = $conf_pass;
-    
     if (!file_exists($base_dir . '/manualOutput.log')) touch($base_dir . '/manualOutput.log');
 	if (!file_exists($base_dir . '/docker_live_output.log')) touch($base_dir . '/docker_live_output.log');
     
@@ -1555,14 +1658,14 @@ if (($user == $conf_user && $pass == $conf_pass) || ($userGET == $conf_user && $
                         </div>
                         <div class="card-info">
                             <div class="anime-title" data="' . htmlspecialchars($anime->url) . '" title="' . htmlspecialchars($anime->name) . '">' . htmlspecialchars($anime->name) . $pausedBadge . '</div>
-                            <div class="premium-badge">' . $anime->customPackage . '</div>
+                            <div class="premium-badge">' . htmlspecialchars($anime->customPackage) . '</div>
                             
                             <div class="meta-data-grid">
                                 <div class="meta-text text-truncate"><i class="bi bi-hdd text-secondary me-1"></i> Rel ID: <span class="text-light">' . $anime->releaseID . '</span></div>
                                 <div class="meta-text text-truncate"><i class="bi bi-hash text-secondary me-1"></i> Ani ID: <span class="text-light">' . $anisearchId . '</span></div>
                             </div>
                             
-                            <div class="meta-text mb-2 text-truncate"><i class="bi bi-activity text-secondary me-1"></i> <span class="text-light">' . $anime->status . '</span></div>
+                            <div class="meta-text mb-2 text-truncate"><i class="bi bi-activity text-secondary me-1"></i> <span class="text-light">' . htmlspecialchars($anime->status) . '</span></div>
                             
                             <div class="d-flex align-items-center gap-3 mb-2">
                                 <div class="meta-text m-0 fw-bold flex-shrink-0" style="color: #56d364;"><i class="bi bi-check2-circle me-1"></i>' . $anime->episodes . '/' . $maxEpisodesSaved . '</div>
@@ -1672,33 +1775,6 @@ if (($user == $conf_user && $pass == $conf_pass) || ($userGET == $conf_user && $
 
     updateImage(); 
 </script>
-
-<?php
-} else {
-?>
-<div class="d-flex align-items-center justify-content-center vh-100" style="background-color: #0d1117;">
-    <div class="panel" style="width: 400px;">
-        <div class="p-4 border-bottom border-secondary bg-black text-center" style="border-radius: 12px 12px 0 0;">
-            <h4 class="mb-0 text-white fw-bold"><i class="bi bi-cloud-arrow-down-fill text-primary me-2"></i>Anime-Loads</h4>
-        </div>
-        <div class="p-4">
-            <form method="POST" action="index.php">
-                <div class="mb-3">
-                    <label class="mb-2">Username</label>
-                    <input type="text" name="user" class="form-control" required>
-                </div>
-                <div class="mb-4">
-                    <label class="mb-2">Password</label>
-                    <input type="password" name="pass" class="form-control" required>
-                </div>
-                <button type="submit" name="submit" class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-box-arrow-in-right me-2"></i>Sign In</button>
-            </form>
-        </div>
-    </div>
-</div>
-<?php
-}
-?>
 
 </body>
 </html>

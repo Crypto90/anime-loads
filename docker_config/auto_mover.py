@@ -3,9 +3,10 @@ import json
 import time
 import shutil
 import urllib.request
+import re
 
 CONFIG_FILE = "/config/config.json"
-MOVE_FILES_AFTER_MODIFIED_IDLE_MINUTES = 1
+MOVE_FILES_AFTER_MODIFIED_IDLE_MINUTES = 3
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
@@ -25,10 +26,11 @@ def get_idle_time(path):
                 mtime = m
     return (time.time() - mtime) / 60.0
 
-def has_rar_files(path):
+def is_extracting_or_downloading(path):
     for root, dirs, files in os.walk(path):
         for f in files:
-            if '.rar' in f.lower() or '.r0' in f.lower() or '.r1' in f.lower():
+            lf = f.lower()
+            if any(ext in lf for ext in ['.rar', '.r0', '.r1', '.part', '.crdownload', '.tmp', '.downloading']):
                 return True
     return False
 
@@ -77,29 +79,32 @@ def main():
         if idle_mins < MOVE_FILES_AFTER_MODIFIED_IDLE_MINUTES:
             continue
             
-        if has_rar_files(item_path):
+        if is_extracting_or_downloading(item_path):
             continue
             
         # Determine category
         target_sub = ""
         base_name = item
-        
         lname = item.lower()
+        
         if "hentai_" in lname:
             target_sub = config.get("cat_hentai", "Hentai")
-            base_name = item.replace("HENTAI_", "").replace(" japanese 1080p movie", "").replace(" japanese 720p movie", "").replace(" japanese 1080p tv", "").replace(" japanese 720p tv", "").replace(" german 1080p movie", "").replace(" german 720p movie", "").replace(" german 1080p tv", "").replace(" german 720p tv", "")
+            base_name = re.sub(r'(?i)^hentai_', '', item)
+            base_name = re.sub(r'(?i)\s+(japanese|german)\s+(1080p|720p)\s+(tv|movie)', '', base_name)
         elif " german 1080p tv" in lname or " german 720p tv" in lname:
             target_sub = config.get("cat_anime_ger", "Anime (Ger)")
-            base_name = item.replace(" german 1080p tv", "").replace(" german 720p tv", "")
+            base_name = re.sub(r'(?i)\s+german\s+(1080p|720p)\s+tv', '', item)
         elif " german 1080p movie" in lname or " german 720p movie" in lname:
             target_sub = config.get("cat_filme_ger", "Filme")
-            base_name = item.replace(" german 1080p movie", "").replace(" german 720p movie", "")
+            base_name = re.sub(r'(?i)\s+german\s+(1080p|720p)\s+movie', '', item)
         elif " japanese 1080p tv" in lname or " japanese 720p tv" in lname:
             target_sub = config.get("cat_anime_jap", "Anime (Jap)")
-            base_name = item.replace(" japanese 1080p tv", "").replace(" japanese 720p tv", "")
+            base_name = re.sub(r'(?i)\s+japanese\s+(1080p|720p)\s+tv', '', item)
         elif " japanese 1080p movie" in lname or " japanese 720p movie" in lname:
             target_sub = config.get("cat_filme_jap", "Filme (Jap)")
-            base_name = item.replace(" japanese 1080p movie", "").replace(" japanese 720p movie", "")
+            base_name = re.sub(r'(?i)\s+japanese\s+(1080p|720p)\s+movie', '', item)
+            
+        base_name = base_name.strip()
             
         if target_sub:
             dest_dir = os.path.join(main_storage, target_sub, base_name)
@@ -107,18 +112,34 @@ def main():
             
             print(f"Moving {item_path} to {dest_dir}")
             
-            # Move files
+            move_success = True
             for f in os.listdir(item_path):
                 src_file = os.path.join(item_path, f)
                 dst_file = os.path.join(dest_dir, f)
-                if not os.path.exists(dst_file):
-                    shutil.move(src_file, dst_file)
-                    
-            shutil.rmtree(item_path)
-            plex_refreshed = True
+                try:
+                    if os.path.exists(dst_file):
+                        if os.path.isdir(dst_file):
+                            shutil.copytree(src_file, dst_file, dirs_exist_ok=True)
+                            if os.path.isdir(src_file):
+                                shutil.rmtree(src_file)
+                            else:
+                                os.remove(src_file)
+                        else:
+                            os.remove(dst_file)
+                            shutil.move(src_file, dst_file)
+                    else:
+                        shutil.move(src_file, dst_file)
+                except Exception as e:
+                    print(f"Error moving {src_file} to {dst_file}: {e}")
+                    move_success = False
+
+            if move_success:
+                shutil.rmtree(item_path, ignore_errors=True)
+                plex_refreshed = True
 
     if plex_refreshed:
         refresh_plex(config)
 
 if __name__ == "__main__":
     main()
+

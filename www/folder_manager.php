@@ -9,6 +9,14 @@ $base_dir = $config['base_dir'];
 
 // folder_manager.php
 session_start();
+$conf_user = $config['web_user'] ?? 'admin';
+$conf_pass = $config['web_password'] ?? 'admin';
+
+if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || !isset($_SESSION['pass']) || $_SESSION['pass'] !== $conf_pass) {
+    session_write_close();
+    header('Location: index.php');
+    exit;
+}
 session_write_close(); // Unlock session immediately so browser doesn't hang
 
 set_time_limit(0);
@@ -82,7 +90,7 @@ foreach ($all_dirs as $index => $dir) {
     }
 }
 
-$jsonFilePath = $base_dir . '/ani.json';  
+$jsonFilePath = file_exists('/config/ani.json') ? '/config/ani.json' : ($base_dir . '/ani.json');  
 
 // --- CORE FUNCTIONS ---
 
@@ -176,12 +184,13 @@ function getFolderDetails($dir) {
     if (!is_readable($dir)) {
         return ['size' => 'N/A', 'count' => 'N/A', 'newest_file_date' => 'N/A'];
     }
-    $size = trim(shell_exec("du -sh \"$dir\" 2>/dev/null | cut -f1"));
+    $escapedDir = escapeshellarg($dir);
+    $size = trim(shell_exec("du -sh $escapedDir 2>/dev/null | cut -f1"));
     if (!empty($size)) {
         $size = preg_replace('/([KMGTP])$/i', '${1}B', $size);
     }
-    $count = trim(shell_exec("find \"$dir\" -type f 2>/dev/null | wc -l"));
-    $newestFileDate = trim(shell_exec("find \"$dir\" -type f -printf '%TY-%Tm-%Td %TH:%TM:%TS\n' 2>/dev/null | sort -r | head -n 1"));
+    $count = trim(shell_exec("find $escapedDir -type f 2>/dev/null | wc -l"));
+    $newestFileDate = trim(shell_exec("find $escapedDir -type f -printf '%TY-%Tm-%Td %TH:%TM:%TS\n' 2>/dev/null | sort -r | head -n 1"));
     if (!empty($newestFileDate)) {
         $newestFileDate = preg_replace('/\.\d+/', '', $newestFileDate);
     }

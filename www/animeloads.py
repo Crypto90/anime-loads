@@ -1055,7 +1055,7 @@ return xhr.response"
             cID = ""
             response_json = utils.doCaptcha(cID, driver, self.session, b64)
             if response_json == False:
-                return ALUnknownException("Ein unbekannter Fehler beim lesen der Hosterlinks aufgetreten, möglicherweise serverseitig.")
+                raise ALUnknownException("Ein unbekannter Fehler beim lesen der Hosterlinks aufgetreten, möglicherweise serverseitig.")
             for key in response_json:
                 value = response_json[key]
                 if(key == "code"):

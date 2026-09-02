@@ -13,7 +13,7 @@ import myjdapi
 # --- CREDENTIALS ---
 EMAIL = config.get('jd_email', '')
 PASSWORD = config.get('jd_password', '')
-DEVICE_NAME = config.get('jd_device_name', '')
+DEVICE_NAME = config.get('myjd_device') or config.get('jd_device_name', '')
 
 try:
     jd = myjdapi.Myjdapi()
@@ -62,7 +62,7 @@ try:
     elif action in ['delete', 'reset', 'force', 'extract', 'resume']:
         if len(sys.argv) > 2:
             # Parse comma-separated IDs for bulk actions
-            package_ids = [int(x) for x in sys.argv[2].split(',')]
+            package_ids = [int(x.strip()) for x in sys.argv[2].split(',') if x.strip().lstrip('-').isdigit()]
             
             if action == 'delete':
                 device.downloads.remove_links(package_ids=package_ids)

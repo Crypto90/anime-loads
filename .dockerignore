@@ -1,0 +1,16 @@
+.git
+.gitignore
+.dockerignore
+.github
+screenshot-bot/node_modules
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+__pycache__
+*.pyc
+*.pyo
+config/
+downloads/
+video/
+test_exec*
