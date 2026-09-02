@@ -182,12 +182,16 @@ if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || $_SESSION['
                         <span>4. JDownloader API</span>
                         <i class="bi bi-dash-circle status-icon status-pending" id="icon-jd"></i>
                     </li>
+                    <li class="list-group-item" id="test-integrations">
+                        <span>5. External Integrations (Plex & Overseerr)</span>
+                        <i class="bi bi-dash-circle status-icon status-pending" id="icon-integrations"></i>
+                    </li>
                     <li class="list-group-item" id="test-selenium">
-                        <span>5. Selenium Engine</span>
+                        <span>6. Selenium Engine</span>
                         <i class="bi bi-dash-circle status-icon status-pending" id="icon-selenium"></i>
                     </li>
                     <li class="list-group-item" id="test-e2e">
-                        <span>6. Anime-Loads E2E Scraping</span>
+                        <span>7. Anime-Loads E2E Scraping</span>
                         <i class="bi bi-dash-circle status-icon status-pending" id="icon-e2e"></i>
                     </li>
                 </ul>
@@ -212,6 +216,7 @@ if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || $_SESSION['
         { id: 'config', name: 'Configuration Integrity', action: 'test_config' },
         { id: 'deps', name: 'Dependencies & Processes', action: 'test_deps' },
         { id: 'jd', name: 'JDownloader API', action: 'test_jd' },
+        { id: 'integrations', name: 'External Integrations (Plex & Overseerr)', action: 'test_integrations' },
         { id: 'selenium', name: 'Selenium Engine', action: 'test_selenium' },
         { id: 'e2e', name: 'Anime-Loads E2E Scraping', action: 'test_e2e' }
     ];

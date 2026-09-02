@@ -118,6 +118,27 @@ if ($action === 'test_config') {
         $success = false;
     }
     
+    // Check ani_paused.json
+    $pausedFile = '/config/ani_paused.json';
+    if (file_exists($pausedFile)) {
+        $paused = json_decode(file_get_contents($pausedFile), true);
+        $log .= "ani_paused.json found. Paused Anime count: " . count($paused['anime'] ?? []) . "\n";
+    }
+
+    // Check queue.txt
+    $queueFile = '/config/queue.txt';
+    if (file_exists($queueFile)) {
+        $lines = array_filter(file($queueFile), 'trim');
+        $log .= "queue.txt found. Pending download items: " . count($lines) . "\n";
+    }
+
+    // Check overseerr_synced.json
+    $syncedFile = '/config/overseerr_synced.json';
+    if (file_exists($syncedFile)) {
+        $synced = json_decode(file_get_contents($syncedFile), true);
+        $log .= "overseerr_synced.json found. Tracked request count: " . count($synced['processed_request_ids'] ?? []) . "\n";
+    }
+    
     sendRes($success, $log, $success ? '' : 'Configuration missing or corrupted');
 }
 
@@ -166,6 +187,14 @@ if ($action === 'test_deps') {
         $log .= "Cron service is NOT running!\n";
         $success = false;
     }
+
+    // Check anibot.py watchlist supervisor daemon
+    $anibot = trim(shell_exec('pgrep -f anibot.py 2>/dev/null'));
+    if (!empty($anibot)) {
+        $log .= "Watchlist Daemon (anibot.py) is running (PID: $anibot).\n";
+    } else {
+        $log .= "Watchlist Daemon (anibot.py) is not currently running (supervised in Docker entrypoint).\n";
+    }
     
     sendRes($success, $log, $success ? '' : 'Missing dependencies or services');
 }
@@ -210,6 +239,78 @@ if ($action === 'test_jd') {
         $log .= "Authentication FAILED: " . ($result['error'] ?? 'Unknown error') . "\n";
         sendRes(false, $log, $result['error'] ?? 'Authentication failed');
     }
+}
+
+if ($action === 'test_integrations') {
+    $log = "";
+    $success = true;
+    
+    if (!file_exists($configFile)) {
+        sendRes(false, "config.json is missing. Cannot test integrations.", "Missing config");
+    }
+    $cfg = json_decode(file_get_contents($configFile), true) ?: [];
+
+    // 1. Plex Webhook
+    $plexHost = rtrim($cfg['plex_host'] ?? '', '/');
+    $plexToken = $cfg['plex_token'] ?? '';
+    if (!empty($plexHost) && !empty($plexToken)) {
+        $log .= "Testing Plex connection to $plexHost...\n";
+        $url = $plexHost . '/library/sections/all/refresh?X-Plex-Token=' . urlencode($plexToken);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        $response = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code >= 200 && $code < 300) {
+            $log .= "Plex Webhook: SUCCESS (HTTP $code)\n";
+        } else {
+            $log .= "Plex Webhook: FAILED (HTTP $code)\n";
+            $success = false;
+        }
+    } else {
+        $log .= "Plex Webhook: Not configured (Optional).\n";
+    }
+
+    // 2. Overseerr / Jellyseerr
+    $overseerrUrl = rtrim($cfg['overseerr_url'] ?? '', '/');
+    $overseerrKey = $cfg['overseerr_api_key'] ?? '';
+    $overseerrEnabled = !empty($cfg['overseerr_enabled']);
+    if (!empty($overseerrUrl) && !empty($overseerrKey)) {
+        $log .= "Testing Overseerr connection to $overseerrUrl (Auto-Sync: " . ($overseerrEnabled ? "Enabled" : "Disabled") . ")...\n";
+        $ch = curl_init($overseerrUrl . '/api/v1/status');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Api-Key: ' . $overseerrKey]);
+        $response = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code >= 200 && $code < 300) {
+            $statusJson = json_decode($response, true);
+            $ver = $statusJson['version'] ?? 'Unknown';
+            $log .= "Overseerr API: SUCCESS (Version $ver)\n";
+        } else {
+            $log .= "Overseerr API: FAILED (HTTP $code)\n";
+            $success = false;
+        }
+    } else {
+        $log .= "Overseerr API: Not configured (Optional).\n";
+    }
+
+    // 3. Push Notifications
+    $pushoverToken = $cfg['pushover_token'] ?? '';
+    $pushbulletKey = $cfg['pushbullet_apikey'] ?? '';
+    if (!empty($pushoverToken)) {
+        $log .= "Pushover Notifications: Configured.\n";
+    }
+    if (!empty($pushbulletKey)) {
+        $log .= "Pushbullet Notifications: Configured.\n";
+    }
+    if (empty($pushoverToken) && empty($pushbulletKey)) {
+        $log .= "Mobile Push Notifications: Not configured (Optional).\n";
+    }
+
+    sendRes($success, $log, $success ? '' : 'One or more integrations failed');
 }
 
 if ($action === 'test_selenium') {
