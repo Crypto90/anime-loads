@@ -684,7 +684,7 @@ def startbot():
         else:
             print("Überspringe Anmeldung")
     else:
-        if(al_user is not None and al_pass is not None):
+        if al_user and al_pass:
             try:
                 al.login(al_user, al_pass)
                 print("Erfolgreich bei Anime-Loads angemeldet")
@@ -707,9 +707,9 @@ def startbot():
             try:
               jd.connect(myjd_user, myjd_pass)
               logincorrect = True
+              print("Erfolgreich bei MyJDownloader eingeloggt")
             except:
                 print("Fehlerhafte Logindaten")
-    print("Erfolgreich eingeloggt")
     if (jd_deprecated and jd_deprecatedport == ""):
         print("Kein JD port gesetzt. beende...")
         sys.exit(1)

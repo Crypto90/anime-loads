@@ -12,7 +12,13 @@ try:
         devices = []
         try:
             jd.update_devices()
-            devices = [device.name for device in jd.list_devices()]
+            devices_list = jd.list_devices()
+            devices = []
+            for device in devices_list:
+                if isinstance(device, dict) and 'name' in device:
+                    devices.append({"name": device['name'], "id": device.get('id', '')})
+                elif hasattr(device, 'name'):
+                    devices.append({"name": device.name, "id": getattr(device, 'device_id', getattr(device, 'id', ''))})
             print(json.dumps({"success": True, "devices": devices}))
         except Exception as e:
             print(json.dumps({"success": True, "devices": [], "error": f"Failed to get devices: {e}"}))

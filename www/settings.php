@@ -77,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $config['myjd_device'] = trim($_POST['myjd_device'] ?? $config['myjd_device'] ?? '');
+    $config['myjd_device_id'] = trim($_POST['myjd_device_id'] ?? $config['myjd_device_id'] ?? '');
     $config['hoster'] = (int)($_POST['hoster'] ?? $config['hoster'] ?? 0);
     $config['timedelay'] = (int)($_POST['timedelay'] ?? $config['timedelay'] ?? 500);
     $config['pushover_token'] = trim($_POST['pushover_token'] ?? $config['pushover_token'] ?? '');
@@ -348,9 +349,10 @@ $additional_dirs = $config['additional_dirs'] ?? [];
                 <div class="col-md-4 mb-3" id="myjd_device_container">
                     <label class="form-label small">Device Name</label>
                     <div class="input-group input-group-sm">
-                        <div id="myjd_device_wrapper" style="flex: 1;">
-                            <input type="text" class="form-control form-control-sm w-100" name="myjd_device" id="myjd_device" value="<?= htmlspecialchars($config['myjd_device'] ?? '') ?>">
-                        </div>
+                            <div id="myjd_device_wrapper" style="flex: 1;">
+                                <input type="text" class="form-control form-control-sm w-100" name="myjd_device" id="myjd_device" value="<?= htmlspecialchars($config['myjd_device'] ?? '') ?>">
+                                <input type="hidden" name="myjd_device_id" id="myjd_device_id" value="<?= htmlspecialchars($config['myjd_device_id'] ?? '') ?>">
+                            </div>
                         <button class="btn btn-outline-info" type="button" id="fetchJdBtn" onclick="fetchJdInstances()" title="Fetch Instances"><i class="bi bi-cloud-download"></i></button>
                     </div>
                 </div>
@@ -565,19 +567,25 @@ $additional_dirs = $config['additional_dirs'] ?? [];
                 msg.className = 'mb-3 text-success-custom';
                 
                 if (data.devices && data.devices.length > 0) {
-                    msg.innerHTML = '<i class="bi bi-check-circle"></i> Instances fetched!';
-                    let selectHtml = `<select class="form-control form-control-sm w-100" id="myjd_device" name="myjd_device">`;
+                    msg.innerHTML = '<i class="bi bi-check-circle"></i> Login successful! Select your instance below.';
+                    let selectHtml = `<select class="form-control form-control-sm w-100" id="myjd_device" name="myjd_device" onchange="document.getElementById('myjd_device_id').value = this.options[this.selectedIndex].getAttribute('data-id')">`;
+                    selectHtml += `<option value="" data-id="" disabled>Select an instance...</option>`;
                     data.devices.forEach(dev => {
-                        const sel = (dev === currentDevice) ? 'selected' : '';
-                        selectHtml += `<option value="${dev}" ${sel}>${dev}</option>`;
+                        const selected = (dev.name === currentDevice) ? 'selected' : '';
+                        selectHtml += `<option value="${dev.name}" data-id="${dev.id}" ${selected}>${dev.name}</option>`;
                     });
                     selectHtml += `</select>`;
+                    selectHtml += `<input type="hidden" id="myjd_device_id" name="myjd_device_id" value="">`;
                     wrapper.innerHTML = selectHtml;
+                    // Trigger onchange to set the hidden input if one is selected
+                    const sel = document.getElementById('myjd_device');
+                    if(sel.selectedIndex >= 0) {
+                        document.getElementById('myjd_device_id').value = sel.options[sel.selectedIndex].getAttribute('data-id');
+                    }
                 } else {
-                    msg.className = 'mb-3 text-warning-custom';
                     const errMsg = data.error ? ` (${data.error})` : '';
                     msg.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found${errMsg}! Please type it manually.`;
-                    wrapper.innerHTML = `<input type="text" class="form-control form-control-sm w-100" name="myjd_device" id="myjd_device" value="${currentDevice}">`;
+                    wrapper.innerHTML = `<input type="text" class="form-control form-control-sm w-100" name="myjd_device" id="myjd_device" value="${currentDevice}"><input type="hidden" id="myjd_device_id" name="myjd_device_id" value="">`;
                 }
             } else {
                 msg.style.display = 'block';

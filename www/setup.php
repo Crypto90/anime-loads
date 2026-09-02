@@ -54,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'web_user' => $_POST['web_user'] ?? 'admin',
         'web_password' => $_POST['web_password'] ?? 'admin',
         'myjd_device' => trim($_POST['myjd_device'] ?? ''),
+        'myjd_device_id' => trim($_POST['myjd_device_id'] ?? ''),
         'hoster' => (int)($_POST['hoster'] ?? 0),
         'al_user' => trim($_POST['al_user'] ?? ''),
         'al_password' => $_POST['al_password'] ?? '',
@@ -683,16 +684,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (data.devices && data.devices.length > 0) {
                     msg.innerHTML = '<i class="bi bi-check-circle"></i> Login successful! Select your instance below.';
-                    let selectHtml = `<select class="form-control" id="myjd_device" name="myjd_device" required>`;
+                    let selectHtml = `<select class="form-control" id="myjd_device" name="myjd_device" onchange="document.getElementById('myjd_device_id').value = this.options[this.selectedIndex].getAttribute('data-id')" required>`;
+                    selectHtml += `<option value="" data-id="" disabled selected>Select an instance...</option>`;
                     data.devices.forEach(dev => {
-                        selectHtml += `<option value="${dev}">${dev}</option>`;
+                        selectHtml += `<option value="${dev.name}" data-id="${dev.id}">${dev.name}</option>`;
                     });
                     selectHtml += `</select>`;
+                    selectHtml += `<input type="hidden" id="myjd_device_id" name="myjd_device_id" value="">`;
                     wrapper.innerHTML = selectHtml;
                 } else {
                     const errMsg = data.error ? ` (${data.error})` : '';
                     msg.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found${errMsg}! Please type it manually.`;
-                    wrapper.innerHTML = `<input type="text" class="form-control" id="myjd_device" name="myjd_device" placeholder="e.g. JDownloader@anime-loads" required>`;
+                    wrapper.innerHTML = `<input type="text" class="form-control" id="myjd_device" name="myjd_device" placeholder="e.g. JDownloader@anime-loads" required><input type="hidden" id="myjd_device_id" name="myjd_device_id" value="">`;
                 }
             } else {
                 msg.style.display = 'block';

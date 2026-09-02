@@ -1241,10 +1241,16 @@ if (($user == $conf_user && $pass == $conf_pass) || ($userGET == $conf_user && $
     </div>
 
     <div class="d-flex gap-2 ms-auto">
+        <a href="https://github.com/Crypto90/anime-loads" target="_blank" class="btn btn-surface btn-sm" title="View Source on GitHub"><i class="bi bi-github me-1"></i> GitHub</a>
+        <a href="https://ko-fi.com/crypto90?ref=anime_loads_docker" target="_blank" class="btn btn-surface btn-sm text-warning" title="Support the Project"><i class="bi bi-cup-hot-fill me-1"></i> Support</a>
         <a href="test.php" class="btn btn-surface btn-sm"><i class="bi bi-activity me-1"></i> Diagnostics</a>
         <a href="settings.php" class="btn btn-surface btn-sm"><i class="bi bi-gear-fill me-1"></i> Settings</a>
         <a href="folder_manager.php?lang=ger" target="_blank" class="btn btn-surface btn-sm"><i class="bi bi-folder-symlink me-1"></i> Folder Manager</a>
-        <a href="https://my.jdownloader.org/index.html?deviceId=dc69ebedb8e5d8a1bd2618dddbee1280#webinterface:downloads" target="_blank" class="btn btn-surface btn-sm"><i class="bi bi-cloud-arrow-down me-1"></i> MyJD API</a>
+        <?php
+            $myjdDeviceId = $config['myjd_device_id'] ?? '';
+            $myjdLink = $myjdDeviceId ? "https://my.jdownloader.org/index.html?deviceId={$myjdDeviceId}#webinterface:downloads" : "https://my.jdownloader.org/";
+        ?>
+        <a href="<?= htmlspecialchars($myjdLink) ?>" target="_blank" class="btn btn-surface btn-sm"><i class="bi bi-cloud-arrow-down me-1"></i> MyJD API</a>
         <a href='?downloader=1' class='btn btn-surface-warning btn-sm'><i class="bi bi-arrow-clockwise me-1"></i> Restart Core</a>
         <a href='?killrequest=1' class='btn btn-surface-danger btn-sm'><i class="bi bi-stop-circle me-1"></i> Kill Active</a>
         <a href="index.php?action=logout" class="btn btn-surface btn-sm px-3"><i class="bi bi-box-arrow-right"></i></a>
