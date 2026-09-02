@@ -23,7 +23,7 @@ def is_docker():
   if not os.path.isfile("/proc/" + str(os.getpid()) + "/cgroup"): return False
   with open("/proc/" + str(os.getpid()) + "/cgroup") as f:
     for line in f:
-      if re.match("\d+:[\w=]+:/docker(-[ce]e)?/\w+", line):
+      if re.match(r"\d+:[\w=]+:/docker(-[ce]e)?/\w+", line):
         return True
     return False
 

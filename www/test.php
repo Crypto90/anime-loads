@@ -1,5 +1,17 @@
 <?php
 session_start();
+$configFile = '/config/config.json';
+if (!file_exists($configFile)) {
+    header('Location: setup.php');
+    exit;
+}
+$config = json_decode(file_get_contents($configFile), true);
+$conf_user = $config['web_user'] ?? 'admin';
+$conf_pass = $config['web_password'] ?? 'admin';
+if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || $_SESSION['pass'] !== $conf_pass) {
+    header('Location: index.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
@@ -97,7 +109,11 @@ session_start();
         .status-icon {
             font-size: 1.2rem;
             width: 24px;
+            height: 24px;
+            display: inline-block;
+            line-height: 24px;
             text-align: center;
+            font-style: normal;
         }
 
         .status-pending { color: #6c757d; }

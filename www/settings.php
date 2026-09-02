@@ -6,6 +6,41 @@ if (!file_exists($configFile)) {
 }
 $config = json_decode(file_get_contents($configFile), true);
 
+session_start();
+$conf_user = $config['web_user'] ?? 'admin';
+$conf_pass = $config['web_password'] ?? 'admin';
+if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || $_SESSION['pass'] !== $conf_pass) {
+    header('Location: index.php');
+    exit;
+}
+
+function getContainerMounts() {
+    $mounts = [];
+    if (file_exists('/proc/mounts')) {
+        $lines = file('/proc/mounts');
+        foreach ($lines as $line) {
+            $parts = explode(' ', $line);
+            if (count($parts) >= 2) {
+                $mountPoint = $parts[1];
+                if (preg_match('#^/(proc|dev|sys|etc|run|var|tmp|usr|bin|sbin|lib|lib64|boot|home|root|opt|srv|mnt|media)(/|$)#', $mountPoint)) continue;
+                if ($mountPoint === '/') continue;
+                if (is_dir($mountPoint)) {
+                    $mounts[] = $mountPoint;
+                }
+            }
+        }
+    }
+    
+    $dirs = array_filter(glob('/*'), 'is_dir');
+    $exclude = ['/bin', '/boot', '/dev', '/etc', '/home', '/lib', '/lib64', '/media', '/mnt', '/opt', '/proc', '/root', '/run', '/sbin', '/srv', '/sys', '/tmp', '/usr', '/var'];
+    $rootDirs = array_values(array_diff($dirs, $exclude));
+    
+    $all = array_unique(array_merge($mounts, $rootDirs));
+    sort($all);
+    return $all;
+}
+$available_mounts = getContainerMounts();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jd_download_dir = trim($_POST['jd_download_dir'] ?? '');
     $jd_extraction_dir = trim($_POST['jd_extraction_dir'] ?? '');
@@ -29,6 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (!empty($_POST['jd_password'])) {
         $config['jd_password'] = $_POST['jd_password'];
+    }
+
+    $config['al_user'] = trim($_POST['al_user'] ?? $config['al_user'] ?? '');
+    if (!empty($_POST['al_password'])) {
+        $config['al_password'] = $_POST['al_password'];
     }
 
     $config['web_user'] = trim($_POST['web_user'] ?? $config['web_user'] ?? 'admin');
@@ -56,6 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $ani['settings']['myjd_device'] = $config['myjd_device'];
             $ani['settings']['hoster'] = $config['hoster'];
+            $ani['settings']['al_user'] = $config['al_user'];
+            if (!empty($_POST['al_password'])) {
+                $ani['settings']['al_pass'] = $config['al_password'];
+            }
             $ani['settings']['timedelay'] = $config['timedelay'];
             $ani['settings']['pushover_token'] = $config['pushover_token'];
             $ani['settings']['pushover_user'] = $config['pushover_user'];
@@ -80,11 +124,102 @@ $additional_dirs = $config['additional_dirs'] ?? [];
     <title>Settings - Anime-Loads</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .settings-card { background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; margin-top: 50px; margin-bottom: 50px; max-width: 800px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-        .btn-custom { background: linear-gradient(45deg, #0d6efd, #0dcaf0); border: none; color: white; font-weight: 500; }
-        .btn-custom:hover { background: linear-gradient(45deg, #0b5ed7, #0bacce); color: white; }
+        /* --- Premium Obsidian Theme --- */
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Inter', -apple-system, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .settings-card { 
+            background-color: #161b22; 
+            border: 1px solid #30363d; 
+            border-radius: 12px; 
+            padding: 40px; 
+            margin-top: 50px; 
+            margin-bottom: 50px; 
+            max-width: 850px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2); 
+        }
+
+        h5.text-primary {
+            color: #58a6ff !important;
+            font-weight: 600;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 10px;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            color: #a1aab5;
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .form-control, .form-select {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: #0d1117;
+            border-color: #58a6ff;
+            color: #e6edf3;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+
+        .btn-custom { 
+            background-color: #238636; 
+            border: 1px solid rgba(240,246,252,0.1); 
+            color: #ffffff; 
+            font-weight: 500; 
+            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            transition: 0.2s;
+        }
+        .btn-custom:hover { background-color: #2ea043; color: white; border-color: rgba(240,246,252,0.1); }
+        
+        .btn-outline-secondary {
+            color: #a1aab5;
+            border-color: #30363d;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #30363d;
+            color: #e6edf3;
+            border-color: #8b949e;
+        }
+
+        .btn-outline-info {
+            color: #58a6ff;
+            border-color: #30363d;
+        }
+        .btn-outline-info:hover {
+            background-color: #30363d;
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+        
+        .text-success-custom { color: #3fb950; }
+        .text-danger-custom { color: #f85149; }
+        .text-warning-custom { color: #d29922; }
+        
+        .input-group-sm > .form-control {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .input-group-sm > .btn {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        /* Micro-animations */
+        .form-control, .btn {
+            transition: all 0.2s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -101,19 +236,46 @@ $additional_dirs = $config['additional_dirs'] ?? [];
 
         <form method="POST">
             <h5 class="text-primary mb-3">Storage Directories</h5>
+            
+            <?php if (!empty($available_mounts)): ?>
+            <p class="text-white-50 small mb-2">
+                Found mounts (click to fill): 
+                <?php foreach($available_mounts as $mount): ?>
+                    <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillInput('input_jd_download_dir', '<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                <?php endforeach; ?>
+            </p>
+            <?php endif; ?>
             <div class="mb-3">
-                <label class="form-label text-warning"><i class="bi bi-hdd-fill"></i> Primary Download Directory</label>
-                <input type="text" class="form-control" name="jd_download_dir" value="<?= htmlspecialchars($jd_download_dir) ?>" required>
+                <label class="form-label"><i class="bi bi-hdd-fill"></i> Primary Download Directory</label>
+                <input type="text" class="form-control" name="jd_download_dir" id="input_jd_download_dir" value="<?= htmlspecialchars($jd_download_dir) ?>" list="availableMounts" required>
             </div>
+            
+            <?php if (!empty($available_mounts)): ?>
+            <p class="text-white-50 small mb-2">
+                Found mounts (click to fill): 
+                <?php foreach($available_mounts as $mount): ?>
+                    <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillInput('input_jd_extraction_dir', '<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                <?php endforeach; ?>
+            </p>
+            <?php endif; ?>
             <div class="mb-3">
-                <label class="form-label text-info"><i class="bi bi-hdd-network-fill"></i> Extraction / Staging Directory</label>
-                <input type="text" class="form-control" name="jd_extraction_dir" value="<?= htmlspecialchars($jd_extraction_dir) ?>">
+                <label class="form-label"><i class="bi bi-hdd-network-fill"></i> Extraction / Staging Directory</label>
+                <input type="text" class="form-control" name="jd_extraction_dir" id="input_jd_extraction_dir" value="<?= htmlspecialchars($jd_extraction_dir) ?>" list="availableMounts">
             </div>
             
             <h5 class="text-primary mt-4 mb-3">Auto-Mover & Plex</h5>
+            
+            <?php if (!empty($available_mounts)): ?>
+            <p class="text-white-50 small mb-2">
+                Found mounts (click to fill): 
+                <?php foreach($available_mounts as $mount): ?>
+                    <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillInput('input_main_storage_dir', '<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                <?php endforeach; ?>
+            </p>
+            <?php endif; ?>
             <div class="mb-3">
-                <label class="form-label text-success"><i class="bi bi-hdd-network-fill"></i> Final Storage Directory (Auto-Mover Target)</label>
-                <input type="text" class="form-control" name="main_storage_dir" value="<?= htmlspecialchars($main_storage_dir) ?>">
+                <label class="form-label"><i class="bi bi-hdd-network-fill"></i> Final Storage Directory (Auto-Mover Target)</label>
+                <input type="text" class="form-control" name="main_storage_dir" id="input_main_storage_dir" value="<?= htmlspecialchars($main_storage_dir) ?>" list="availableMounts">
             </div>
             <p class="text-white-50 small mt-3 mb-2">
                 <i class="bi bi-info-circle-fill"></i> <strong>Category Subfolders:</strong> The Auto-Mover will automatically sort downloaded anime and movies into specific subfolders inside your Final Storage Directory. You can customize the names of these subfolders below.
@@ -156,7 +318,24 @@ $additional_dirs = $config['additional_dirs'] ?? [];
             </div>
             <div id="plex-validation-msg" class="mb-3 text-success-custom" style="display:none; font-weight:bold;"></div>
 
+            <h5 class="text-primary mt-4 mb-3">Anime-Loads Login (Optional)</h5>
+            <p class="text-white-50 small mb-4">
+                The bot can scrape Anime-Loads completely anonymously. However, anonymous scraping has drawbacks such as stricter limits and frequent captchas. 
+                <strong>Logging in</strong> with a free or VIP account provides higher scraping limits and may bypass some captchas automatically.
+            </p>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">Username</label>
+                    <input type="text" class="form-control form-control-sm" name="al_user" value="<?= htmlspecialchars($config['al_user'] ?? '') ?>" placeholder="(Leave blank for anonymous)">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">Password</label>
+                    <input type="password" class="form-control form-control-sm" name="al_password" placeholder="(Leave blank to keep unchanged)">
+                </div>
+            </div>
+
             <h5 class="text-primary mt-4 mb-3">MyJDownloader Account</h5>
+            <p class="text-white-50 small mb-3">Your credentials are required to send downloaded links automatically to your JDownloader instance.</p>
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label small">Email</label>
@@ -227,6 +406,22 @@ $additional_dirs = $config['additional_dirs'] ?? [];
 
             <h5 class="text-primary mt-4 mb-3">Backup / Additional Targets</h5>
             <p class="text-white-50 small mb-3">Add additional paths (like external USB drives) here. The built-in Folder Manager tool allows you to easily move your finished anime folders to these disks to free up space on your main drive.</p>
+            
+            <?php if (!empty($available_mounts)): ?>
+            <p class="text-white-50 small mb-3">
+                Found mounts (click to add): 
+                <?php foreach($available_mounts as $mount): ?>
+                    <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillOrAddDir('<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                <?php endforeach; ?>
+            </p>
+            <?php endif; ?>
+
+            <datalist id="availableMounts">
+            <?php foreach($available_mounts as $mount): ?>
+                <option value="<?= htmlspecialchars($mount) ?>"></option>
+            <?php endforeach; ?>
+            </datalist>
+
             <div id="dir-list"></div>
             <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addAdditionalDirField()">+ Add Backup Directory</button>
 
@@ -238,12 +433,30 @@ $additional_dirs = $config['additional_dirs'] ?? [];
 </div>
 
 <script>
+    function fillInput(id, path) {
+        const input = document.getElementById(id);
+        if (input) {
+            input.value = path;
+        }
+    }
+
+    function fillOrAddDir(path) {
+        const inputs = document.querySelectorAll('input[name="additional_dirs[]"]');
+        for (let i = 0; i < inputs.length; i++) {
+            if (inputs[i].value.trim() === '') {
+                inputs[i].value = path;
+                return;
+            }
+        }
+        addAdditionalDirField(path);
+    }
+
     let dirCount = 0;
     function addAdditionalDirField(value = '') {
         const id = 'additional_' + dirCount++;
         const html = `
             <div class="d-flex mb-2" id="container_${id}">
-                <input type="text" class="form-control form-control-sm me-2" name="additional_dirs[]" value="${value}">
+                <input type="text" class="form-control form-control-sm me-2" name="additional_dirs[]" value="${value}" list="availableMounts">
                 <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('container_${id}').remove()"><i class="bi bi-trash"></i></button>
             </div>
         `;
@@ -361,8 +574,10 @@ $additional_dirs = $config['additional_dirs'] ?? [];
                     selectHtml += `</select>`;
                     wrapper.innerHTML = selectHtml;
                 } else {
-                    msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found! Please type it manually.';
-                    wrapper.innerHTML = `<input type="text" class="form-control form-control-sm w-100" id="myjd_device" name="myjd_device" value="${currentDevice}">`;
+                    msg.className = 'mb-3 text-warning-custom';
+                    const errMsg = data.error ? ` (${data.error})` : '';
+                    msg.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found${errMsg}! Please type it manually.`;
+                    wrapper.innerHTML = `<input type="text" class="form-control form-control-sm w-100" name="myjd_device" id="myjd_device" value="${currentDevice}">`;
                 }
             } else {
                 msg.style.display = 'block';

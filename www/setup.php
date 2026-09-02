@@ -2,6 +2,33 @@
 $configFile = '/config/config.json';
 if (!is_dir('/config')) mkdir('/config', 0777, true);
 
+function getContainerMounts() {
+    $mounts = [];
+    if (file_exists('/proc/mounts')) {
+        $lines = file('/proc/mounts');
+        foreach ($lines as $line) {
+            $parts = explode(' ', $line);
+            if (count($parts) >= 2) {
+                $mountPoint = $parts[1];
+                if (preg_match('#^/(proc|dev|sys|etc|run|var|tmp|usr|bin|sbin|lib|lib64|boot|home|root|opt|srv|mnt|media)(/|$)#', $mountPoint)) continue;
+                if ($mountPoint === '/') continue;
+                if (is_dir($mountPoint)) {
+                    $mounts[] = $mountPoint;
+                }
+            }
+        }
+    }
+    
+    $dirs = array_filter(glob('/*'), 'is_dir');
+    $exclude = ['/bin', '/boot', '/dev', '/etc', '/home', '/lib', '/lib64', '/media', '/mnt', '/opt', '/proc', '/root', '/run', '/sbin', '/srv', '/sys', '/tmp', '/usr', '/var'];
+    $rootDirs = array_values(array_diff($dirs, $exclude));
+    
+    $all = array_unique(array_merge($mounts, $rootDirs));
+    sort($all);
+    return $all;
+}
+$available_mounts = getContainerMounts();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jd_download_dir = trim($_POST['jd_download_dir'] ?? '');
     $jd_extraction_dir = trim($_POST['jd_extraction_dir'] ?? '');
@@ -28,6 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'web_password' => $_POST['web_password'] ?? 'admin',
         'myjd_device' => trim($_POST['myjd_device'] ?? ''),
         'hoster' => (int)($_POST['hoster'] ?? 0),
+        'al_user' => trim($_POST['al_user'] ?? ''),
+        'al_password' => $_POST['al_password'] ?? '',
         'setup_complete' => true
     ];
     file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
@@ -41,6 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ani['settings']['myjd_pw'] = $config['jd_password'];
             $ani['settings']['myjd_device'] = $config['myjd_device'];
             $ani['settings']['hoster'] = $config['hoster'];
+            $ani['settings']['al_user'] = $config['al_user'];
+            $ani['settings']['al_pass'] = $config['al_password'];
             file_put_contents($aniFile, json_encode($ani, JSON_PRETTY_PRINT));
         }
     }
@@ -247,8 +278,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-4">
                     <label class="form-label text-warning-custom"><i class="bi bi-hdd-fill"></i> Primary Download Directory (Required)</label>
                     <p class="text-white-50 small mb-2">Where JDownloader downloads the raw archives (e.g. your SSD Cache).</p>
+                    
+                    <?php if (!empty($available_mounts)): ?>
+                    <p class="text-white-50 small mb-2">
+                        Found mounts (click to fill): 
+                        <?php foreach($available_mounts as $mount): ?>
+                            <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillInput('input_primary_dir', '<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                        <?php endforeach; ?>
+                    </p>
+                    <?php endif; ?>
+
                     <div class="dir-item mb-0" id="container_primary_dir">
-                        <input type="text" class="form-control" name="jd_download_dir" placeholder="/downloads" onblur="verifyDir('primary_dir')" id="input_primary_dir" required>
+                        <input type="text" class="form-control" name="jd_download_dir" placeholder="/downloads" onblur="verifyDir('primary_dir')" id="input_primary_dir" list="availableMounts" required>
                         <div class="validation-icon" id="icon_primary_dir"><i class="bi bi-question-circle text-white-50"></i></div>
                     </div>
                 </div>
@@ -256,8 +297,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-4">
                     <label class="form-label text-info"><i class="bi bi-hdd-network-fill"></i> Extraction / Staging Directory (Optional)</label>
                     <p class="text-white-50 small mb-2">If you want JDownloader to extract to a different disk (e.g. SSD). The Auto-Mover will monitor this folder.<br><strong>If left empty:</strong> The Auto-Mover will monitor your Primary Download Directory instead.<br><strong>Important:</strong> You must configure JDownloader's Archive Extractor or Packagizer to point to this path manually!</p>
+                    
+                    <?php if (!empty($available_mounts)): ?>
+                    <p class="text-white-50 small mb-2">
+                        Found mounts (click to fill): 
+                        <?php foreach($available_mounts as $mount): ?>
+                            <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillInput('input_extraction_dir', '<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                        <?php endforeach; ?>
+                    </p>
+                    <?php endif; ?>
+
                     <div class="dir-item mb-0" id="container_extraction_dir">
-                        <input type="text" class="form-control" name="jd_extraction_dir" placeholder="/extraction" onblur="verifyDir('extraction_dir')" id="input_extraction_dir">
+                        <input type="text" class="form-control" name="jd_extraction_dir" placeholder="/extraction" onblur="verifyDir('extraction_dir')" id="input_extraction_dir" list="availableMounts">
                         <div class="validation-icon" id="icon_extraction_dir"><i class="bi bi-question-circle text-white-50"></i></div>
                     </div>
                 </div>
@@ -265,8 +316,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-4">
                     <label class="form-label text-success-custom"><i class="bi bi-hdd-network-fill"></i> Final Storage Directory (Optional)</label>
                     <p class="text-white-50 small mb-2">If set, enables the Auto-Mover cron job to move finished extracted folders here.</p>
+                    
+                    <?php if (!empty($available_mounts)): ?>
+                    <p class="text-white-50 small mb-2">
+                        Found mounts (click to fill): 
+                        <?php foreach($available_mounts as $mount): ?>
+                            <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillInput('input_main_storage_dir', '<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                        <?php endforeach; ?>
+                    </p>
+                    <?php endif; ?>
+
                     <div class="dir-item mb-0" id="container_main_storage_dir">
-                        <input type="text" class="form-control" name="main_storage_dir" placeholder="/video" onblur="verifyDir('main_storage_dir')" id="input_main_storage_dir">
+                        <input type="text" class="form-control" name="main_storage_dir" placeholder="/video" onblur="verifyDir('main_storage_dir')" id="input_main_storage_dir" list="availableMounts">
                         <div class="validation-icon" id="icon_main_storage_dir"><i class="bi bi-question-circle text-white-50"></i></div>
                     </div>
                 </div>
@@ -274,6 +335,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <hr class="border-secondary mb-4">
                 <label class="form-label"><i class="bi bi-folder-symlink-fill"></i> Backup / Additional Targets (Optional)</label>
                 <p class="text-white-50 small mb-3">Add additional paths (like external USB drives) here. The built-in Folder Manager tool allows you to easily move your finished anime folders to these disks to free up space on your main drive.</p>
+                
+                <?php if (!empty($available_mounts)): ?>
+                <p class="text-white-50 small mb-3">
+                    Found mounts (click to add): 
+                    <?php foreach($available_mounts as $mount): ?>
+                        <span class="badge bg-secondary cursor-pointer user-select-none me-1" style="cursor:pointer;" onclick="fillOrAddDir('<?= htmlspecialchars($mount) ?>')"><?= htmlspecialchars($mount) ?></span>
+                    <?php endforeach; ?>
+                </p>
+                <?php endif; ?>
+
+                <datalist id="availableMounts">
+                <?php foreach($available_mounts as $mount): ?>
+                    <option value="<?= htmlspecialchars($mount) ?>"></option>
+                <?php endforeach; ?>
+                </datalist>
 
                 <div id="dir-list">
                     <!-- Additional Directory items will be injected here -->
@@ -289,10 +365,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
 
-            <!-- Step 3: MyJDownloader -->
+            <!-- Step 3: External Accounts -->
             <div class="step-container" id="step-3">
-                <h4 class="mb-4 text-center">MyJDownloader Account</h4>
-                <p class="text-white-50 text-center mb-4">Your credentials are required to send links to JDownloader.</p>
+                <h4 class="mb-4 text-center">External Accounts</h4>
+                
+                <h5 class="text-primary mt-4 mb-3">Anime-Loads Login (Optional)</h5>
+                <p class="text-white-50 small mb-4">
+                    The bot can scrape Anime-Loads completely anonymously. However, anonymous scraping has drawbacks such as stricter limits and frequent captchas. 
+                    <strong>Logging in</strong> with a free or VIP account provides higher scraping limits and may bypass some captchas automatically.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label">Anime-Loads Username</label>
+                    <input type="text" class="form-control" name="al_user" placeholder="(Leave blank for anonymous scraping)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Anime-Loads Password</label>
+                    <input type="password" class="form-control" name="al_password" placeholder="(Leave blank if anonymous)">
+                </div>
+
+                <hr class="border-secondary my-4">
+
+                <h5 class="text-primary mb-3">MyJDownloader Account (Required)</h5>
+                <p class="text-white-50 mb-4">Your credentials are required to send downloaded links automatically to your JDownloader instance.</p>
                 
                 <div class="mb-3">
                     <label class="form-label">Email</label>
@@ -301,7 +395,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-3">
                     <label class="form-label">Password</label>
                     <input type="password" class="form-control" id="jd_password" name="jd_password" required>
-                </div>
                 </div>
                 <div class="mb-3 text-end">
                     <button type="button" class="btn btn-sm btn-outline-info" id="fetchJdBtn" onclick="fetchJdInstances()"><i class="bi bi-cloud-download"></i> Login & Fetch Instances</button>
@@ -440,11 +533,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    function fillInput(id, path) {
+        const input = document.getElementById(id);
+        if (input) {
+            input.value = path;
+            verifyDir(id.replace('input_', ''));
+        }
+    }
+
+    function fillOrAddDir(path) {
+        const inputs = document.querySelectorAll('input[name="additional_dirs[]"]');
+        for (let i = 0; i < inputs.length; i++) {
+            if (inputs[i].value.trim() === '') {
+                inputs[i].value = path;
+                verifyDir(inputs[i].id.replace('input_', ''));
+                return;
+            }
+        }
+        addAdditionalDirField(path);
+    }
+
     function addAdditionalDirField(value = '') {
         const id = 'additional_' + dirCount++;
         const html = `
             <div class="dir-item" id="container_${id}">
-                <input type="text" class="form-control" name="additional_dirs[]" value="${value}" placeholder="/mnt/usb/video" onblur="verifyDir('${id}')" id="input_${id}">
+                <input type="text" class="form-control" name="additional_dirs[]" value="${value}" placeholder="/mnt/usb/video" onblur="verifyDir('${id}')" id="input_${id}" list="availableMounts">
                 <div class="validation-icon" id="icon_${id}">
                     <i class="bi bi-question-circle text-white-50"></i>
                 </div>
@@ -577,7 +690,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     selectHtml += `</select>`;
                     wrapper.innerHTML = selectHtml;
                 } else {
-                    msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found! Please type it manually.';
+                    const errMsg = data.error ? ` (${data.error})` : '';
+                    msg.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found${errMsg}! Please type it manually.`;
                     wrapper.innerHTML = `<input type="text" class="form-control" id="myjd_device" name="myjd_device" placeholder="e.g. JDownloader@anime-loads" required>`;
                 }
             } else {

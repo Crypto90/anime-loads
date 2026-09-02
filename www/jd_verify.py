@@ -13,9 +13,9 @@ try:
         try:
             jd.update_devices()
             devices = [device.name for device in jd.list_devices()]
-        except Exception:
-            pass
-        print(json.dumps({"success": True, "devices": devices}))
+            print(json.dumps({"success": True, "devices": devices}))
+        except Exception as e:
+            print(json.dumps({"success": True, "devices": [], "error": f"Failed to get devices: {e}"}))
         sys.exit(0)
     else:
         print(json.dumps({"success": False, "error": "Invalid credentials"}))

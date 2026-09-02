@@ -829,7 +829,7 @@ $allAnimeObjects = json_decode(json_encode($allAnime));
                 let $updateBtn = $('#jd-update-btn');
                 if (data.hasUpdate === true) {
                     $updateBtn.removeClass('btn-surface').addClass('btn-surface-warning pulse-animation').attr('title', 'Update Available! Click to install.');
-                    $updateBtn.html('<i class="bi bi-cloud-arrow-down-fill text-dark me-1"></i><span class="text-dark fw-bold" style="font-size: 12px;">Update Ready</span>');
+                    $updateBtn.html('<i class="bi bi-cloud-arrow-down-fill me-1"></i><span class="fw-bold" style="font-size: 12px;">Update Ready</span>');
                 } else {
                     $updateBtn.removeClass('btn-surface-warning pulse-animation').addClass('btn-surface').attr('title', 'Check / Trigger Update');
                     $updateBtn.html('<i class="bi bi-cloud-arrow-down text-info fs-6"></i>');

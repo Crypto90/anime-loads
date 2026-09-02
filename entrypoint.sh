@@ -38,10 +38,10 @@ if [ ! -d "/var/www/html/config" ] && [ ! -L "/var/www/html/config" ]; then
     ln -s /config /var/www/html/config
 fi
 
-# We can run anibot in the foreground to keep the container alive
+# We can run anibot in the background and redirect output to log
 echo "Starting anibot..."
 cd /var/www/html
-python3 anibot.py --docker
+python3 -u anibot.py --docker > /usr/src/app/docker_live_output.log 2>&1 &
 
 # Fallback keep-alive if anibot exits
 tail -f /dev/null

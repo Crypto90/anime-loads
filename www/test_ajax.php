@@ -1,5 +1,19 @@
 <?php
+session_start();
 header('Content-Type: application/json');
+
+$configFile = '/config/config.json';
+if (!file_exists($configFile)) {
+    echo json_encode(['success' => false, 'error' => 'Not configured']);
+    exit;
+}
+$config = json_decode(file_get_contents($configFile), true);
+$conf_user = $config['web_user'] ?? 'admin';
+$conf_pass = $config['web_password'] ?? 'admin';
+if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || $_SESSION['pass'] !== $conf_pass) {
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    exit;
+}
 
 if (!isset($_POST['action'])) {
     echo json_encode(['success' => false, 'error' => 'No action specified']);
@@ -7,7 +21,6 @@ if (!isset($_POST['action'])) {
 }
 
 $action = $_POST['action'];
-$configFile = '/config/config.json';
 $aniFile = '/config/ani.json';
 
 // Helper for sending json response
@@ -222,7 +235,7 @@ if ($action === 'test_selenium') {
     $testScriptPath = sys_get_temp_dir() . '/test_selenium_' . time() . '.py';
     file_put_contents($testScriptPath, $script);
     
-    $output = shell_exec("python3 " . escapeshellarg($testScriptPath) . " 2>&1");
+    $output = shell_exec("/usr/local/bin/python3 " . escapeshellarg($testScriptPath) . " 2>&1");
     @unlink($testScriptPath);
     
     if (strpos($output, 'SUCCESS') !== false) {
@@ -250,16 +263,17 @@ if ($action === 'test_e2e') {
             . "\n"
             . "try:\n"
             . "    print('Initializing Animeloads object (Headless Firefox)...')\n"
-            . "    al = animeloads.Animeloads(browser='Firefox')\n"
+            . "    al = animeloads.animeloads(browser='Firefox')\n"
             . "    print('Testing Search function for \"Naruto\"...')\n"
             . "    results = al.search('Naruto')\n"
             . "    if not results:\n"
             . "        print('ERROR: Search returned no results.')\n"
             . "        sys.exit(1)\n"
             . "    \n"
-            . "    anime = results[0]\n"
-            . "    print(f'Found Anime: {anime.getName()} ({anime.getTyp()})')\n"
+            . "    search_res = results[0]\n"
+            . "    print(f'Found Anime: {search_res.getName()} ({search_res.getTyp()})')\n"
             . "    print('Fetching details and releases...')\n"
+            . "    anime = search_res.getAnime()\n"
             . "    anime.updateInfo()\n"
             . "    releases = anime.getReleases()\n"
             . "    if not releases:\n"
@@ -271,13 +285,13 @@ if ($action === 'test_e2e') {
             . "    print('Executing captchas (simulated/automated)...')\n"
             . "    \n"
             . "    # Mock the addToMYJD function to prevent actual payload being sent to JD\n"
-            . "    original_add = animeloads.Animeloads.addToMYJD\n"
+            . "    original_add = animeloads.utils.addToMYJD\n"
             . "    mock_called = False\n"
             . "    def mock_add(myjd_user, myjd_pass, myjd_device, links, pkgName, pwd, destinationFolder=None):\n"
             . "        global mock_called\n"
             . "        mock_called = True\n"
             . "        print(f'MOCK JD INTERCEPT: Received {len(links)} links for package {pkgName}')\n"
-            . "    animeloads.Animeloads.addToMYJD = staticmethod(mock_add)\n"
+            . "    animeloads.utils.addToMYJD = staticmethod(mock_add)\n"
             . "    \n"
             . "    # Try downloading episode 1 of this release\n"
             . "    anime.downloadEpisode('1', release, 'ddownload', 'Firefox', '', '', '', '', '')\n"
@@ -291,7 +305,7 @@ if ($action === 'test_e2e') {
     file_put_contents($testScriptPath, $script);
     
     // We run it with a timeout of 45 seconds as it can take some time
-    $output = shell_exec("timeout 45 python3 " . escapeshellarg($testScriptPath) . " 2>&1");
+    $output = shell_exec("timeout 45 /usr/local/bin/python3 " . escapeshellarg($testScriptPath) . " 2>&1");
     @unlink($testScriptPath);
     
     if (strpos($output, 'SUCCESS') !== false) {

@@ -9,9 +9,9 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Install geckodriver
-RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.31.0/geckodriver-v0.31.0-linux64.tar.gz && \
-    tar -xf geckodriver-v0.31.0-linux64.tar.gz && \
-    rm geckodriver-v0.31.0-linux64.tar.gz && \
+RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.37.1/geckodriver-v0.37.1-linux64.tar.gz && \
+    tar -xf geckodriver-v0.37.1-linux64.tar.gz && \
+    rm geckodriver-v0.37.1-linux64.tar.gz && \
     mv geckodriver /usr/bin/
 
 # Copy Python requirements
@@ -31,7 +31,7 @@ RUN chown -R www-data:www-data /var/www/html/
 # Copy background scripts
 COPY docker_config/*.py ./
 COPY docker_config/*.sh ./
-RUN chmod +x *.sh
+RUN chmod +x *.sh && chown -R www-data:www-data /usr/src/app
 
 # Setup entrypoint and cron
 COPY entrypoint.sh /usr/local/bin/
