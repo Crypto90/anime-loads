@@ -38,6 +38,15 @@ if ($action === 'test_fs') {
         $log .= "/config is present.\n";
         if (is_writable('/config')) {
             $log .= "/config is writable.\n";
+            if (is_dir('/config/backups')) {
+                $log .= "/config/backups is present.\n";
+                if (is_writable('/config/backups')) {
+                    $log .= "/config/backups is writable.\n";
+                } else {
+                    $log .= "/config/backups is NOT writable by www-data.\n";
+                    $success = false;
+                }
+            }
         } else {
             $log .= "/config is NOT writable by www-data.\n";
             $success = false;
@@ -137,6 +146,13 @@ if ($action === 'test_config') {
     if (file_exists($syncedFile)) {
         $synced = json_decode(file_get_contents($syncedFile), true);
         $log .= "overseerr_synced.json found. Tracked request count: " . count($synced['processed_request_ids'] ?? []) . "\n";
+    }
+
+    // Check backups
+    $backupDir = '/config/backups';
+    if (is_dir($backupDir)) {
+        $backupList = glob($backupDir . '/*.zip') ?: [];
+        $log .= "Automated Backups: " . count($backupList) . " snapshot(s) available in /config/backups.\n";
     }
     
     sendRes($success, $log, $success ? '' : 'Configuration missing or corrupted');

@@ -121,5 +121,63 @@ if ($action === 'reset_overseerr_sync') {
     exit;
 }
 
+if ($action === 'list_backups') {
+    $script = file_exists('/usr/src/app/auto_backup.py') ? '/usr/src/app/auto_backup.py' : '../docker_config/auto_backup.py';
+    $output = shell_exec('python3 ' . escapeshellarg($script) . ' list 2>&1');
+    $data = json_decode($output, true);
+    if ($data !== null) {
+        echo json_encode(['success' => true, 'backups' => $data]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Failed to retrieve backups list: ' . $output]);
+    }
+    exit;
+}
+
+if ($action === 'create_backup') {
+    $script = file_exists('/usr/src/app/auto_backup.py') ? '/usr/src/app/auto_backup.py' : '../docker_config/auto_backup.py';
+    $output = shell_exec('python3 ' . escapeshellarg($script) . ' create 2>&1');
+    $data = json_decode($output, true);
+    if ($data !== null && !empty($data['success'])) {
+        echo json_encode(['success' => true, 'backup' => $data]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Failed to create backup: ' . $output]);
+    }
+    exit;
+}
+
+if ($action === 'restore_backup') {
+    $filename = basename($_POST['filename'] ?? '');
+    if (empty($filename)) {
+        echo json_encode(['success' => false, 'error' => 'Filename missing']);
+        exit;
+    }
+    $script = file_exists('/usr/src/app/auto_backup.py') ? '/usr/src/app/auto_backup.py' : '../docker_config/auto_backup.py';
+    $output = shell_exec('python3 ' . escapeshellarg($script) . ' restore ' . escapeshellarg($filename) . ' 2>&1');
+    $data = json_decode($output, true);
+    if ($data !== null && !empty($data['success'])) {
+        echo json_encode(['success' => true, 'data' => $data]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Restore failed: ' . $output]);
+    }
+    exit;
+}
+
+if ($action === 'delete_backup') {
+    $filename = basename($_POST['filename'] ?? '');
+    if (empty($filename)) {
+        echo json_encode(['success' => false, 'error' => 'Filename missing']);
+        exit;
+    }
+    $script = file_exists('/usr/src/app/auto_backup.py') ? '/usr/src/app/auto_backup.py' : '../docker_config/auto_backup.py';
+    $output = shell_exec('python3 ' . escapeshellarg($script) . ' delete ' . escapeshellarg($filename) . ' 2>&1');
+    $data = json_decode($output, true);
+    if ($data !== null && !empty($data['success'])) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Delete failed: ' . $output]);
+    }
+    exit;
+}
+
 echo json_encode(['success' => false, 'error' => 'Invalid action']);
 exit;

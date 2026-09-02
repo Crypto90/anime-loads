@@ -35,6 +35,7 @@ This project is a complete modern rewrite of the original bare-metal Python CLI 
 - **Smart Auto-Mover**: Once JDownloader finishes extracting a file, the built-in `auto_mover.py` detects it and transfers it cleanly to your final media storage without leaving temporary archives behind.
 - **Plex Integration**: Automatically triggers a Plex Library scan via Webhook as soon as new episodes are moved to your final storage.
 - **System Diagnostics Suite**: Built-in 7-point health check (`/test.php`) verifying filesystem permissions, configuration files, background daemons, JDownloader API, Plex webhook, Overseerr connectivity, and Selenium scraping engine.
+- **Automated Rolling Backups & 1-Click Restore**: Daily 3:00 AM snapshots preserving up to 10 historical copies of your config, watchlist, and queues in `/config/backups/`, with download and one-click restore directly from Settings.
 - **Folder Manager**: Built-in tool to archive and organize your finished series across multiple disks or USB drives.
 - **Security Hardened**: Built-in Nginx rules denying public access to `/config`, state files, dotfiles, scripts, and logs.
 

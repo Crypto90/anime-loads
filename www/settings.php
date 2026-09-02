@@ -480,6 +480,34 @@ $additional_dirs = $config['additional_dirs'] ?? [];
                 <button type="submit" class="btn btn-custom btn-lg"><i class="bi bi-save"></i> Save Settings</button>
             </div>
         </form>
+
+        <hr class="border-secondary my-5">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="text-primary mb-1"><i class="bi bi-shield-lock-fill me-2"></i>Automated Backups & Restore</h4>
+                <p class="text-white-50 small mb-0">Daily rolling snapshots (kept up to 10) of your watchlist, config, and queues are saved in <code>/config/backups/</code>.</p>
+            </div>
+            <button type="button" class="btn btn-outline-success btn-sm" id="btnCreateBackup" onclick="createBackupNow()"><i class="bi bi-cloud-arrow-up-fill me-1"></i> Create Backup Now</button>
+        </div>
+
+        <div id="backup-alert-msg" style="display:none;" class="mb-3"></div>
+
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover align-middle small mb-0">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>File Name</th>
+                        <th>Size</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="backups-table-body">
+                    <tr><td colspan="4" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-1"></span> Loading backups...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -521,6 +549,7 @@ $additional_dirs = $config['additional_dirs'] ?? [];
         } else {
             additionalDirs.forEach(dir => addAdditionalDirField(dir));
         }
+        loadBackups();
     };
 
     async function verifyPlex() {
@@ -723,6 +752,114 @@ $additional_dirs = $config['additional_dirs'] ?? [];
 
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-cloud-download"></i>';
+    }
+
+    async function loadBackups() {
+        const tbody = document.getElementById('backups-table-body');
+        try {
+            const formData = new FormData();
+            formData.append('action', 'list_backups');
+            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success && data.backups) {
+                if (data.backups.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No backups created yet. Click "Create Backup Now" above.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.backups.map(b => `
+                    <tr>
+                        <td><i class="bi ${b.is_pre_restore ? 'bi-shield-check text-warning' : 'bi-archive text-info'} me-2"></i>${b.date_formatted} ${b.is_pre_restore ? '<span class="badge bg-warning text-dark ms-1">Pre-Restore</span>' : ''}</td>
+                        <td><code>${b.filename}</code></td>
+                        <td>${b.size_formatted}</td>
+                        <td class="text-end">
+                            <a href="download_backup.php?file=${encodeURIComponent(b.filename)}" class="btn btn-sm btn-outline-info me-1" title="Download ZIP"><i class="bi bi-download"></i></a>
+                            <button type="button" class="btn btn-sm btn-outline-warning me-1" onclick="restoreBackup('${b.filename}')" title="Restore this backup"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteBackup('${b.filename}')" title="Delete backup"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">Failed to load backups list.</td></tr>';
+            }
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">Error connecting to backup service.</td></tr>';
+        }
+    }
+
+    async function createBackupNow() {
+        const btn = document.getElementById('btnCreateBackup');
+        const alertBox = document.getElementById('backup-alert-msg');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating...';
+        alertBox.style.display = 'none';
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'create_backup');
+            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                alertBox.className = "alert alert-success";
+                alertBox.innerHTML = '<i class="bi bi-check-circle me-1"></i> Backup created: <strong>' + data.backup.filename + '</strong> (' + data.backup.file_count + ' files preserved)';
+                alertBox.style.display = 'block';
+                loadBackups();
+            } else {
+                alertBox.className = "alert alert-danger";
+                alertBox.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> ' + (data.error || 'Failed to create backup.');
+                alertBox.style.display = 'block';
+            }
+        } catch (e) {
+            alertBox.className = "alert alert-danger";
+            alertBox.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Network error.';
+            alertBox.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i> Create Backup Now';
+    }
+
+    async function restoreBackup(filename) {
+        if (!confirm(`Are you sure you want to restore "${filename}"?\n\nA safety snapshot of your current files will be created automatically before restoring.`)) return;
+        const alertBox = document.getElementById('backup-alert-msg');
+        alertBox.className = "alert alert-info";
+        alertBox.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Restoring backup...';
+        alertBox.style.display = 'block';
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'restore_backup');
+            formData.append('filename', filename);
+            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                alertBox.className = "alert alert-success";
+                alertBox.innerHTML = '<i class="bi bi-check-circle me-1"></i> Successfully restored from <strong>' + filename + '</strong>! Reloading page...';
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                alertBox.className = "alert alert-danger";
+                alertBox.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> ' + (data.error || 'Failed to restore.');
+            }
+        } catch (e) {
+            alertBox.className = "alert alert-danger";
+            alertBox.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Network error during restore.';
+        }
+    }
+
+    async function deleteBackup(filename) {
+        if (!confirm(`Delete backup "${filename}"?`)) return;
+        try {
+            const formData = new FormData();
+            formData.append('action', 'delete_backup');
+            formData.append('filename', filename);
+            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                loadBackups();
+            } else {
+                alert(data.error || 'Failed to delete backup.');
+            }
+        } catch (e) {
+            alert('Network error.');
+        }
     }
 </script>
 </body>

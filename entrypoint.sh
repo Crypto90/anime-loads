@@ -18,12 +18,14 @@ fi
 echo '* * * * * root wget --output-document=/dev/null --timeout=30 "http://127.0.0.1/index.php?processqueue=1"' > /etc/cron.d/cronjob
 echo '*/5 * * * * root python3 /usr/src/app/auto_mover.py >> /var/log/auto_mover.log 2>&1' >> /etc/cron.d/cronjob
 echo '*/15 * * * * root python3 /usr/src/app/parseRequestedAnimeMoviesAndSeries.py >> /var/log/overseerr_sync.log 2>&1' >> /etc/cron.d/cronjob
+echo '0 3 * * * root python3 /usr/src/app/auto_backup.py create >> /var/log/auto_backup.log 2>&1' >> /etc/cron.d/cronjob
 chmod 0644 /etc/cron.d/cronjob
 
 # Start Cron
 service cron start
 
-# Ensure config directory has right permissions so PHP can write config.json to it
+# Ensure config and backups directories have right permissions
+mkdir -p /config/backups
 chown -R www-data:www-data /config
 chmod 775 /config
 
