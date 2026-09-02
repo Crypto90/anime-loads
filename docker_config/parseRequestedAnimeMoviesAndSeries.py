@@ -1,180 +1,216 @@
-try:
-    from urllib.request import Request, urlopen  # Python 3
-    from urllib.error import HTTPError
-except ImportError:
-    from urllib2 import Request, urlopen  # Python 2
-    from urllib2 import HTTPError
+#!/usr/bin/env python3
 import json
-from subprocess import Popen, PIPE, STDOUT
-import shlex
+import os
 import re
-import os.path
-import os, time, shutil
+import sys
+import time
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
+CONFIG_FILE = "/config/config.json"
+QUEUE_FILE = "/config/queue.txt"
+REQUEST_LOG_FILE = "/config/requestlog.txt"
+ANI_FILE = "/config/ani.json"
+SYNCED_FILE = "/config/overseerr_synced.json"
 
 
 def load_config():
-    cfg_file = "/config/config.json"
-    if os.path.isfile(cfg_file):
+    if os.path.isfile(CONFIG_FILE):
         try:
-            with open(cfg_file) as f:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error reading {CONFIG_FILE}: {e}")
     return {}
 
-config = load_config()
-OVERSEER_API_KEY = config.get("overseerr_api_key", os.environ.get("OVERSEERR_API_KEY", ""))
-OVERSEER_URL = config.get("overseerr_url", os.environ.get("OVERSEERR_URL", ""))
 
-one_day_ago = time.time() - (7 * 86400)
-no_releases_log_file = "no_releases_found_log.txt"
-if os.path.isfile(no_releases_log_file):
+def load_synced_state():
+    if os.path.isfile(SYNCED_FILE):
+        try:
+            with open(SYNCED_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except Exception as e:
+            print(f"Error reading {SYNCED_FILE}: {e}")
+    return {"processed_request_ids": [], "history": []}
+
+
+def save_synced_state(state):
     try:
-        if os.stat(no_releases_log_file).st_ctime <= one_day_ago:
-            print("Deleted", no_releases_log_file, "because creation date is older than 7 days.")
-            os.remove(no_releases_log_file)
+        os.makedirs(os.path.dirname(SYNCED_FILE), exist_ok=True)
+        temp_file = SYNCED_FILE + ".tmp"
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2, ensure_ascii=False)
+        os.replace(temp_file, SYNCED_FILE)
     except Exception as e:
-        print("Could not remove file:", no_releases_log_file, e)
+        print(f"[OVERSEERR] Failed to save {SYNCED_FILE}: {e}")
 
 
-def execAnimeLoadsSearch(result_title):
-    #check first if title is already in downloading_and_monitoring.txt file, if true return
-    if not os.path.isfile('downloading_and_monitoring.txt'):
-        open('downloading_and_monitoring.txt', 'a').close()
-    if not os.path.isfile('no_releases_found_log.txt'):
-        open('no_releases_found_log.txt', 'a').close()
-    
-    if os.path.isfile('downloading_and_monitoring.txt'):
-        with open('downloading_and_monitoring.txt') as myfile:
-            if result_title in myfile.read():
-                print("\"" + result_title + "\" already exists in downloading_and_monitoring.txt... Skipping...\n")
-                return
-        with open('no_releases_found_log.txt') as myfile:
-            if result_title in myfile.read():
-                print("\"" + result_title + "\" already exists in no_releases_found_log.txt... it will get cleared every 24 hours. Skipping...\n")
-                return
-        print("Running: python3 download_anime.py \"" + result_title + "\" german 1080p\n")
-        p = Popen(shlex.split("python3 download_anime.py \"" + result_title + "\" german 1080p"), stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-        while True:
-            output = p.stdout.readline().rstrip().decode()
-            print(output)
-            if "Exit" in output:
-                p.terminate()
-            if "Finished" in output:
-                with open("downloading_and_monitoring.txt", "a+") as text_file:
-                    text_file.write("%s [GERMAN]\n" % result_title)
-                break
-                p.terminate()
-            if "Keine Ergebnisse" in output:
-                print("Could not find \"" + result_title + "\" german 1080p -- searching for japanese version...\n")
-                with open("no_releases_found_log.txt", "a+") as text_file:
-                    text_file.write("Could not find \"%s\" german 1080p\n" % result_title)
-                p.terminate()
-                print("Running: python3 download_anime.py \"" + result_title + "\" japanese 1080p\n")
-                p2 = Popen(shlex.split("python3 download_anime.py \"" + result_title + "\" japanese 1080p"), stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-                while True:
-                    output2 = p2.stdout.readline().rstrip().decode()
-                    print(output2)
-                    if "Exit" in output2:
-                        p2.terminate()
-                    if "Finished" in output2:
-                        with open("downloading_and_monitoring.txt", "a+") as text_file:
-                            text_file.write("%s [JAPANESE]\n" % result_title)
-                        break
-                        p2.terminate()
-                    if "Keine Ergebnisse" in output2:
-                        print("Could not find \"" + result_title + "\" japanese 1080p -- Skipping title\n")
-                        with open("no_releases_found_log.txt", "a+") as text_file:
-                            text_file.write("Could not find \"%s\" japanese 1080p\n" % result_title)
-                        break
-                        p2.terminate()
-                    if output2 == '' and p2.poll() is not None:
-                        break
-                rc2 = p2.poll()
-                break
-            
-            if output == '' and p.poll() is not None:
-                break
-        rc = p.poll()
+def is_already_known(title):
+    clean_target = re.sub(r'[^a-zA-Z0-9]+', ' ', title).strip().lower()
+    if not clean_target:
+        return True
+
+    # 1. Check active & monitored anime in ani.json
+    if os.path.isfile(ANI_FILE):
+        try:
+            with open(ANI_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                for item in data.get("anime", []):
+                    item_name = re.sub(r'[^a-zA-Z0-9]+', ' ', item.get("name", "")).strip().lower()
+                    if clean_target == item_name or clean_target in item_name or item_name in clean_target:
+                        return True
+        except Exception:
+            pass
+
+    # 2. Check pending queue.txt
+    if os.path.isfile(QUEUE_FILE):
+        try:
+            with open(QUEUE_FILE, "r", encoding="utf-8") as f:
+                content = f.read().lower()
+                if clean_target in content:
+                    return True
+        except Exception:
+            pass
+
+    return False
 
 
-# first get all unavailable requests, get their id and type (tv or movie), then get the tv or movie details and check for "Animation".
-req = Request(OVERSEER_URL + '/api/v1/request?take=100000&filter=unavailable&sort=added')
-req.add_header('X-Api-Key', OVERSEER_API_KEY)
-jsonDataAll = json.loads(urlopen(req).read().decode())
-RESULT_COUNTER=0
+def queue_title(title, default_lang="german", default_res="1080p"):
+    clean_title = re.sub(r'[^a-zA-Z0-9\s\-_]+', '', title).strip()
+    if not clean_title:
+        return False
 
-print("Found", len(jsonDataAll['results']), "open requests which now gets filtered for anime only...")
+    if is_already_known(clean_title):
+        print(f'[OVERSEERR] "{clean_title}" is already monitored or queued. Skipping.')
+        return False
 
-for result in reversed(jsonDataAll['results']):
-    # we now have all unavailable requests, now we need to check if its in genre animation for type tv and movie
-    #print("id:", result['id'], 'type:', result['type'], 'created:', result['createdAt'])
+    queue_line = f"{clean_title};{default_lang};{default_res};0;0;0;0\n"
+    os.makedirs("/config", exist_ok=True)
     
-    result_id = result['id']
-    result_type = result['type']
-    result_created = result['createdAt']
-    result_requested_by = result['requestedBy']['displayName']
-    
-    result_media_id = result['media']['id']
-    
-    result_media_tmdbId = result['media']['tmdbId']
-    result_media_tvdbId = result['media']['tvdbId']
-    result_media_imdbId = result['media']['imdbId']
-    
-    result_media_serviceId = result['media']['serviceId']
-    
-    result_media_service_id_to_use = 0;
-    if result_media_serviceId == 0:
-        result_media_service_id_to_use = result_media_tmdbId
-    elif result_media_serviceId == 1:
-        result_media_service_id_to_use = result_media_tvdbId
-    elif result_media_serviceId == 1:
-        result_media_service_id_to_use = result_media_imdbId
-    
-    
+    with open(QUEUE_FILE, "a", encoding="utf-8") as f:
+        f.write(queue_line)
+    with open(REQUEST_LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(queue_line)
+
+    print(f'[OVERSEERR] Successfully queued "{clean_title}" ({default_lang} {default_res}) for download.')
+    return True
+
+
+def sync_overseerr():
+    config = load_config()
+    enabled = config.get("overseerr_enabled", False)
+    base_url = config.get("overseerr_url", os.environ.get("OVERSEERR_URL", "")).rstrip("/")
+    api_key = config.get("overseerr_api_key", os.environ.get("OVERSEERR_API_KEY", "")).strip()
+
+    if not enabled and not (base_url and api_key):
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Overseerr integration is disabled.")
+        return
+
+    if not base_url or not api_key:
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Overseerr URL or API key is missing. Skipping sync.")
+        return
+
+    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Connecting to Overseerr at {base_url}...")
+
+    # Fetch unavailable / pending requests
+    endpoint = f"{base_url}/api/v1/request?take=100&filter=unavailable&sort=added"
     try:
-        print(OVERSEER_URL + '/api/v1/' + result_type + '/' + str(result_media_service_id_to_use) + '?language=en')
-        singleReq = Request(OVERSEER_URL + '/api/v1/' + result_type + '/' + str(result_media_service_id_to_use) + '?language=en')
-        singleReq.add_header('X-Api-Key', OVERSEER_API_KEY)
-        resultSingle = json.loads(urlopen(singleReq).read().decode())
-        result_title = ''
-        if result_type == 'movie':
-            result_title = resultSingle['title']
+        req = Request(endpoint)
+        req.add_header("X-Api-Key", api_key)
+        req.add_header("User-Agent", "AnimeLoadsUniversal/2.0")
+        with urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+    except (HTTPError, URLError, Exception) as e:
+        print(f"[OVERSEERR ERROR] Failed to fetch requests from {endpoint}: {e}")
+        return
+
+    results = data.get("results", [])
+    print(f"[OVERSEERR] Found {len(results)} open requests.")
+
+    synced_state = load_synced_state()
+    synced_ids = set(synced_state.get("processed_request_ids", []))
+    state_modified = False
+
+    preferred_lang = config.get("overseerr_lang", "german")
+    preferred_res = config.get("overseerr_res", "1080p")
+    queued_count = 0
+
+    for item in reversed(results):
+        req_id = item.get("id")
+        # If this request ID was already processed in a previous run, do not process again
+        if req_id is not None and req_id in synced_ids:
+            continue
+
+        media = item.get("media", {})
+        result_type = item.get("type", "tv")
+
+        # TMDB or TVDB lookup ID
+        lookup_id = media.get("tmdbId") or media.get("tvdbId")
+        if not lookup_id:
+            continue
+
+        detail_endpoint = f"{base_url}/api/v1/{result_type}/{lookup_id}?language=de"
+        try:
+            detail_req = Request(detail_endpoint)
+            detail_req.add_header("X-Api-Key", api_key)
+            detail_req.add_header("User-Agent", "AnimeLoadsUniversal/2.0")
+            with urlopen(detail_req, timeout=10) as detail_resp:
+                detail = json.loads(detail_resp.read().decode())
+        except Exception:
+            continue
+
+        title = detail.get("name") if result_type == "tv" else detail.get("title")
+        if not title:
+            continue
+
+        genres = [g.get("name", "") for g in detail.get("genres", [])]
+        keywords = [k.get("name", "") for k in detail.get("keywords", [])]
+        orig_lang = detail.get("originalLanguage", "")
+
+        is_anime = False
+        if any("anime" in k.lower() for k in keywords):
+            is_anime = True
+        elif orig_lang == "ja" and any("animation" in g.lower() or "anime" in g.lower() for g in genres):
+            is_anime = True
+
+        if is_anime:
+            queued = queue_title(title, preferred_lang, preferred_res)
+            if queued:
+                queued_count += 1
+            if req_id is not None:
+                synced_ids.add(req_id)
+                synced_state["processed_request_ids"].append(req_id)
+                synced_state.setdefault("history", []).append({
+                    "request_id": req_id,
+                    "title": title,
+                    "type": result_type,
+                    "status": "queued" if queued else "already_monitored",
+                    "synced_at": int(time.time())
+                })
+                state_modified = True
         else:
-            result_title = resultSingle['name'] 
-        result_status = resultSingle['status']#status has to be 'Released'
-        result_keywords = ''
-        if "keywords" in resultSingle:
-            result_keywords = resultSingle['keywords']
-        result_genres = ''
-        if "genres" in resultSingle:
-            result_genres = resultSingle['genres']
-        
-        result_original_language = resultSingle['originalLanguage']
-        
-        result_keywords_string = json.dumps(result_keywords)
-        result_genres_string = json.dumps(result_genres)
-        #print(result_genres_string)
-        if ("anime" in result_keywords_string or "Anime" in result_keywords_string) or ("ja" in result_original_language and "Animation" in result_genres_string):
-            RESULT_COUNTER=RESULT_COUNTER+1
-            print("#"+str(RESULT_COUNTER), "title:", result_title, 'type:', result_type, 'status:', result_status, 'created:', result_created, 'Requester:', result_requested_by, "id:", result_id,"media_id:", result_media_id, "tmdbId:", result_media_tmdbId, "tvdbId:", result_media_tvdbId, "imdbId:", result_media_imdbId, "serviceId:", result_media_serviceId)
-            
-            result_title = re.sub(r"[^a-zA-Z0-9]+", ' ', result_title)
-            print("Searching for \"" + result_title + "\" on anime-loads.org ...\n")
-            execAnimeLoadsSearch(result_title)
-            
-            
-            
-    except HTTPError as err:
-        if err.code == 404 or err.code == 500:
-               continue
-        else:
-            raise
-    
-    
-    
-    
-    
-    
-    
+            # Not an anime: record as handled so we don't query TMDB/TVDB repeatedly
+            if req_id is not None:
+                synced_ids.add(req_id)
+                synced_state["processed_request_ids"].append(req_id)
+                synced_state.setdefault("history", []).append({
+                    "request_id": req_id,
+                    "title": title,
+                    "type": result_type,
+                    "status": "ignored_non_anime",
+                    "synced_at": int(time.time())
+                })
+                state_modified = True
+
+    if state_modified:
+        if len(synced_state["history"]) > 500:
+            synced_state["history"] = synced_state["history"][-500:]
+        save_synced_state(synced_state)
+
+    print(f"[OVERSEERR] Sync completed. {queued_count} new anime added to queue.")
+
+
+if __name__ == "__main__":
+    sync_overseerr()

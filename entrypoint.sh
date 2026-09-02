@@ -17,6 +17,7 @@ fi
 # Setup Crontab for processing queue if needed
 echo '* * * * * root wget --output-document=/dev/null --timeout=30 "http://127.0.0.1/index.php?processqueue=1"' > /etc/cron.d/cronjob
 echo '*/5 * * * * root python3 /usr/src/app/auto_mover.py >> /var/log/auto_mover.log 2>&1' >> /etc/cron.d/cronjob
+echo '*/15 * * * * root python3 /usr/src/app/parseRequestedAnimeMoviesAndSeries.py >> /var/log/overseerr_sync.log 2>&1' >> /etc/cron.d/cronjob
 chmod 0644 /etc/cron.d/cronjob
 
 # Start Cron

@@ -85,5 +85,41 @@ if ($action === 'verify_plex') {
     exit;
 }
 
+if ($action === 'verify_overseerr') {
+    $url = rtrim($_POST['url'] ?? '', '/');
+    $api_key = $_POST['api_key'] ?? '';
+    
+    if (empty($url) || empty($api_key)) {
+        echo json_encode(['success' => false, 'error' => 'URL or API key missing']);
+        exit;
+    }
+
+    $ch = curl_init($url . '/api/v1/status');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Api-Key: ' . $api_key]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        $json = json_decode($response, true);
+        $version = $json['version'] ?? '';
+        echo json_encode(['success' => true, 'version' => $version]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Overseerr verification failed (HTTP ' . $httpCode . ')']);
+    }
+    exit;
+}
+
+if ($action === 'reset_overseerr_sync') {
+    $syncedFile = '/config/overseerr_synced.json';
+    if (file_exists($syncedFile)) {
+        @unlink($syncedFile);
+    }
+    echo json_encode(['success' => true, 'message' => 'Sync history reset. Next sync will re-evaluate all open requests.']);
+    exit;
+}
+
 echo json_encode(['success' => false, 'error' => 'Invalid action']);
 exit;

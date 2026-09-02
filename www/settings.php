@@ -60,6 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $config['cat_hentai'] = trim($_POST['cat_hentai'] ?? 'Hentai');
     $config['plex_host'] = trim($_POST['plex_host'] ?? '');
     $config['plex_token'] = trim($_POST['plex_token'] ?? '');
+    $config['overseerr_url'] = rtrim(trim($_POST['overseerr_url'] ?? ''), '/');
+    $config['overseerr_api_key'] = trim($_POST['overseerr_api_key'] ?? '');
+    $config['overseerr_enabled'] = isset($_POST['overseerr_enabled']) ? true : false;
+    $config['overseerr_lang'] = trim($_POST['overseerr_lang'] ?? 'german');
+    $config['overseerr_res'] = trim($_POST['overseerr_res'] ?? '1080p');
     $config['jd_email'] = trim($_POST['jd_email'] ?? $config['jd_email']);
     
     if (!empty($_POST['jd_password'])) {
@@ -321,6 +326,46 @@ $additional_dirs = $config['additional_dirs'] ?? [];
             </div>
             <div id="plex-validation-msg" class="mb-3 text-success-custom" style="display:none; font-weight:bold;"></div>
 
+            <h5 class="text-primary mt-4 mb-3"><i class="bi bi-collection-play me-2"></i>Overseerr / Jellyseerr Integration (Optional)</h5>
+            <p class="text-white-50 small mb-2">Automatically poll your Overseerr or Jellyseerr instance every 15 minutes and queue newly requested anime series into the download queue.</p>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">Overseerr / Jellyseerr URL</label>
+                    <input type="text" class="form-control form-control-sm" name="overseerr_url" id="overseerr_url" placeholder="http://192.168.1.100:5055" value="<?= htmlspecialchars($config['overseerr_url'] ?? '') ?>">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small">API Key</label>
+                    <input type="password" class="form-control form-control-sm" name="overseerr_api_key" id="overseerr_api_key" placeholder="Enter API Key" value="<?= htmlspecialchars($config['overseerr_api_key'] ?? '') ?>">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label small">Default Audio</label>
+                    <select class="form-control form-control-sm" name="overseerr_lang">
+                        <option value="german" <?= ($config['overseerr_lang'] ?? 'german') === 'german' ? 'selected' : '' ?>>German (Deutsch)</option>
+                        <option value="japanese" <?= ($config['overseerr_lang'] ?? '') === 'japanese' ? 'selected' : '' ?>>Japanese (Japanisch)</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label small">Default Resolution</label>
+                    <select class="form-control form-control-sm" name="overseerr_res">
+                        <option value="1080p" <?= ($config['overseerr_res'] ?? '1080p') === '1080p' ? 'selected' : '' ?>>1080p</option>
+                        <option value="720p" <?= ($config['overseerr_res'] ?? '') === '720p' ? 'selected' : '' ?>>720p</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3 d-flex align-items-center pt-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="overseerr_enabled" name="overseerr_enabled" <?= !empty($config['overseerr_enabled']) ? 'checked' : '' ?>>
+                        <label class="form-check-label small" for="overseerr_enabled">Enable Auto-Sync</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <button type="button" class="btn btn-sm btn-outline-info" id="verifyOverseerrBtn" onclick="verifyOverseerr()"><i class="bi bi-link-45deg"></i> Verify Overseerr Connection</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="resetOverseerrBtn" onclick="resetOverseerrSync()"><i class="bi bi-arrow-counterclockwise"></i> Reset Sync History</button>
+            </div>
+            <div id="overseerr-validation-msg" class="mb-3 text-success-custom" style="display:none; font-weight:bold;"></div>
+
             <h5 class="text-primary mt-4 mb-3">Anime-Loads Login (Optional)</h5>
             <p class="text-white-50 small mb-4">
                 The bot can scrape Anime-Loads completely anonymously. However, anonymous scraping has drawbacks such as stricter limits and frequent captchas. 
@@ -517,6 +562,80 @@ $additional_dirs = $config['additional_dirs'] ?? [];
         
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-play-circle"></i> Verify Plex Connection';
+    }
+
+    async function verifyOverseerr() {
+        const url = document.getElementById('overseerr_url').value.trim();
+        const apiKey = document.getElementById('overseerr_api_key').value.trim();
+        const msg = document.getElementById('overseerr-validation-msg');
+        const btn = document.getElementById('verifyOverseerrBtn');
+
+        if(!url || !apiKey) {
+            alert("Please enter both Overseerr URL and API Key to verify.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Verifying...';
+        msg.style.display = 'none';
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'verify_overseerr');
+            formData.append('url', url);
+            formData.append('api_key', apiKey);
+            
+            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if(data.success) {
+                msg.className = "mb-3 text-success-custom";
+                msg.innerHTML = '<i class="bi bi-check-circle"></i> Connection successful!' + (data.version ? ' (Version: ' + data.version + ')' : '');
+                msg.style.display = 'block';
+            } else {
+                msg.className = "mb-3 text-danger-custom";
+                msg.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.error || 'Verification failed.');
+                msg.style.display = 'block';
+            }
+        } catch (e) {
+            msg.className = "mb-3 text-warning-custom";
+            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Network error during verification.';
+            msg.style.display = 'block';
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-link-45deg"></i> Verify Overseerr Connection';
+    }
+
+    async function resetOverseerrSync() {
+        if (!confirm("Are you sure you want to reset Overseerr sync history? This will allow previously queued or ignored requests from Overseerr to be re-evaluated.")) return;
+        const btn = document.getElementById('resetOverseerrBtn');
+        const msg = document.getElementById('overseerr-validation-msg');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Resetting...';
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'reset_overseerr_sync');
+            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                msg.className = "mb-3 text-info";
+                msg.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+                msg.style.display = 'block';
+            } else {
+                msg.className = "mb-3 text-danger-custom";
+                msg.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.error || 'Failed to reset.');
+                msg.style.display = 'block';
+            }
+        } catch (e) {
+            msg.className = "mb-3 text-warning-custom";
+            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Network error.';
+            msg.style.display = 'block';
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Reset Sync History';
     }
 
     async function verifyJD() {
