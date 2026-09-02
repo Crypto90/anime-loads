@@ -1,6 +1,18 @@
 <?php
 header('Content-Type: application/json');
 
+$configFile = '/config/config.json';
+if (file_exists($configFile)) {
+    session_start();
+    $config = json_decode(file_get_contents($configFile), true);
+    $conf_user = $config['web_user'] ?? 'admin';
+    $conf_pass = $config['web_password'] ?? 'admin';
+    if (!isset($_SESSION['user']) || $_SESSION['user'] !== $conf_user || !isset($_SESSION['pass']) || $_SESSION['pass'] !== $conf_pass) {
+        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+        exit;
+    }
+}
+
 if (!isset($_POST['action'])) {
     echo json_encode(['success' => false, 'error' => 'No action specified']);
     exit;

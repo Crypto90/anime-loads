@@ -72,8 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $config['web_user'] = trim($_POST['web_user'] ?? $config['web_user'] ?? 'admin');
+    $_SESSION['user'] = $config['web_user'];
     if (!empty($_POST['web_password'])) {
         $config['web_password'] = $_POST['web_password'];
+        $_SESSION['pass'] = $config['web_password'];
     }
 
     $config['myjd_device'] = trim($_POST['myjd_device'] ?? $config['myjd_device'] ?? '');

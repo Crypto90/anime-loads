@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Start Nginx
-/etc/init.d/nginx start
-
 # Start PHP-FPM (find the exact version installed)
 php_service=$(ls /etc/init.d/ | grep php | grep fpm)
 service $php_service start
@@ -12,8 +9,10 @@ sleep 1
 SOCK=$(ls /run/php/ | grep fpm.sock | head -n 1)
 if [ -n "$SOCK" ]; then
     sed -i "s/php[0-9.]*-fpm\.sock/$SOCK/g" /etc/nginx/sites-available/default
-    /etc/init.d/nginx reload
 fi
+
+# Start Nginx
+/etc/init.d/nginx start
 
 # Setup Crontab for processing queue if needed
 echo '* * * * * root wget --output-document=/dev/null --timeout=30 "http://127.0.0.1/index.php?processqueue=1"' > /etc/cron.d/cronjob

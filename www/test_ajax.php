@@ -235,7 +235,7 @@ if ($action === 'test_selenium') {
     $testScriptPath = sys_get_temp_dir() . '/test_selenium_' . time() . '.py';
     file_put_contents($testScriptPath, $script);
     
-    $output = shell_exec("/usr/local/bin/python3 " . escapeshellarg($testScriptPath) . " 2>&1");
+    $output = shell_exec("python3 " . escapeshellarg($testScriptPath) . " 2>&1");
     @unlink($testScriptPath);
     
     if (strpos($output, 'SUCCESS') !== false) {
@@ -305,7 +305,7 @@ if ($action === 'test_e2e') {
     file_put_contents($testScriptPath, $script);
     
     // We run it with a timeout of 45 seconds as it can take some time
-    $output = shell_exec("timeout 45 /usr/local/bin/python3 " . escapeshellarg($testScriptPath) . " 2>&1");
+    $output = shell_exec("timeout 45 python3 " . escapeshellarg($testScriptPath) . " 2>&1");
     @unlink($testScriptPath);
     
     if (strpos($output, 'SUCCESS') !== false) {

@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 
 # Install dependencies
 RUN apt-get update -y && \
-    apt-get install -y firefox-esr nginx php php-fpm php-curl php-dom cron wget && \
+    apt-get install -y firefox-esr nginx php php-fpm php-curl php-dom php-mbstring cron wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

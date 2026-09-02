@@ -7,52 +7,41 @@ if (!file_exists($configFile)) {
 $config = json_decode(file_get_contents($configFile), true);
 $base_dir = $config['base_dir'];
 
-	ini_set('display_errors', 1);
-	ini_set('display_startup_errors', 1);
-	error_reporting(E_ALL);
+	ini_set('display_errors', 0);
+	ini_set('display_startup_errors', 0);
+	error_reporting(0);
 	
-	if (isset($_GET['urlName']) && $_GET['urlName'] != '') {
-		if (is_file('./anime_cover/' . $_GET['urlName'] . '.webp')) {
-			$name = './anime_cover/' . $_GET['urlName'] . '.webp';
+	$rawName = $_GET['urlName'] ?? ($_GET['url'] ?? '');
+	$urlName = basename(trim($rawName));
+
+	if ($urlName != '') {
+		if (is_file('./anime_cover/' . $urlName . '.webp')) {
+			$name = './anime_cover/' . $urlName . '.webp';
 			$fp = fopen($name, 'rb');
-			// send the right headers
 			header("Content-Type: image/webp");
 			header("Content-Length: " . filesize($name));
-			// dump the picture and stop the script
 			fpassthru($fp);
-		} else if (is_file('./anime_cover/' . $_GET['urlName'] . '.jpeg')) {
-			$name = './anime_cover/' . $_GET['urlName'] . '.jpeg';
+			exit;
+		} else if (is_file('./anime_cover/' . $urlName . '.jpeg')) {
+			$name = './anime_cover/' . $urlName . '.jpeg';
 			$fp = fopen($name, 'rb');
-			// send the right headers
 			header("Content-Type: image/jpeg");
 			header("Content-Length: " . filesize($name));
-			// dump the picture and stop the script
 			fpassthru($fp);
-		} else if (is_file('./anime_cover/' . $_GET['urlName'] . '.png')) {
-			$name = './anime_cover/' . $_GET['urlName'] . '.png';
+			exit;
+		} else if (is_file('./anime_cover/' . $urlName . '.png')) {
+			$name = './anime_cover/' . $urlName . '.png';
 			$fp = fopen($name, 'rb');
-			// send the right headers
 			header("Content-Type: image/png");
 			header("Content-Length: " . filesize($name));
-			// dump the picture and stop the script
 			fpassthru($fp);
+			exit;
 		} else {
-			// we have to download it.
-			
-			
-			//header("Content-Type: image/jpg");
-			$url = $_GET['url'];
-			$urlName = $_GET['urlName'];
-			$urlId = $_GET['id'];
-			//$url = "https://www.anime-loads.org/files/image/" . $urlName . "-cover.jpg";
-			
-			//$url = "https://www.anime-loads.org/%2f/files/image/w200-" . $urlName . "-cover.jpg";
-			
-			//$url = "https://www.anime-loads.org/files/image/w200-" . $urlName . "-cover.png";
-			
-			
-			
-			
+			$urlId = preg_replace('/[^0-9]/', '', $_GET['id'] ?? '');
+			if (empty($urlId)) {
+				http_response_code(404);
+				exit;
+			}
 			$url = "https://cdn.anisearch.de/images/anime/cover/" . substr($urlId, 0, 2) . "/" . $urlId . "_600.webp";
 			
 			//var_dump($url);

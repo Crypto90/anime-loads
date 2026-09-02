@@ -13,21 +13,29 @@ import os, time, shutil
 
 
 
-OVERSEER_API_KEY = "MTY2MTk5NzgwMTE2NDBlNjlhNDE3LWQ2OWQtNGVlYS04Y2IxLWE4NjZkMDQzYWY0Nik="
-OVERSEER_URL = "https://request.shieldserver.de"
+def load_config():
+    cfg_file = "/config/config.json"
+    if os.path.isfile(cfg_file):
+        try:
+            with open(cfg_file) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
 
-
-
+config = load_config()
+OVERSEER_API_KEY = config.get("overseerr_api_key", os.environ.get("OVERSEERR_API_KEY", ""))
+OVERSEER_URL = config.get("overseerr_url", os.environ.get("OVERSEERR_URL", ""))
 
 one_day_ago = time.time() - (7 * 86400)
 no_releases_log_file = "no_releases_found_log.txt"
-if os.stat(no_releases_log_file).st_ctime <= one_day_ago:
-    if os.path.isfile(path):
-        try:
-            print("Deleted", no_releases_log_file, "because creation date is older than 24 hours.")
+if os.path.isfile(no_releases_log_file):
+    try:
+        if os.stat(no_releases_log_file).st_ctime <= one_day_ago:
+            print("Deleted", no_releases_log_file, "because creation date is older than 7 days.")
             os.remove(no_releases_log_file)
-        except:
-            print("Could not remove file:", no_releases_log_file)
+    except Exception as e:
+        print("Could not remove file:", no_releases_log_file, e)
 
 
 def execAnimeLoadsSearch(result_title):
