@@ -302,9 +302,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label class="form-label">Password</label>
                     <input type="password" class="form-control" id="jd_password" name="jd_password" required>
                 </div>
-                <div class="mb-4">
+                </div>
+                <div class="mb-3 text-end">
+                    <button type="button" class="btn btn-sm btn-outline-info" id="fetchJdBtn" onclick="fetchJdInstances()"><i class="bi bi-cloud-download"></i> Login & Fetch Instances</button>
+                </div>
+                <div class="mb-4" id="myjd_device_container">
                     <label class="form-label">Device Name</label>
-                    <input type="text" class="form-control" id="myjd_device" name="myjd_device" placeholder="e.g. JDownloader@anime-loads" required>
+                    <div id="myjd_device_wrapper">
+                        <input type="text" class="form-control" id="myjd_device" name="myjd_device" placeholder="e.g. JDownloader@anime-loads" required>
+                    </div>
                 </div>
                 
                 <div id="jd-validation-msg" class="mb-3 text-center" style="display:none; font-weight:bold;"></div>
@@ -522,54 +528,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     async function verifyJdAndNext() {
-        const email = document.getElementById('jd_email').value.trim();
-        const pass = document.getElementById('jd_password').value;
-        const msg = document.getElementById('jd-validation-msg');
-        const btn = document.getElementById('verifyJdBtn');
+        // Just standard validation here since we decoupled the fetching
+        const device = document.getElementById('myjd_device');
+        if (!device || !device.value.trim()) {
+            alert("Please provide or select a Device Name.");
+            return;
+        }
+        nextStep(4);
+    }
 
-        if(!email || !pass) {
-            alert("Please enter JD email and password.");
+    async function fetchJdInstances() {
+        const email = document.getElementById('jd_email').value.trim();
+        const pwd = document.getElementById('jd_password').value;
+        const msg = document.getElementById('jd-validation-msg');
+        const btn = document.getElementById('fetchJdBtn');
+        const wrapper = document.getElementById('myjd_device_wrapper');
+        
+        if (!email || !pwd) {
+            msg.style.display = 'block';
+            msg.className = 'mb-3 text-center text-danger-custom';
+            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Please enter email and password first.';
             return;
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Verifying...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Fetching...';
         msg.style.display = 'none';
 
         try {
-            const formData = new FormData();
-            formData.append('action', 'verify_jd');
-            formData.append('email', email);
-            formData.append('password', pass);
-            
-            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
-            const data = await res.json();
-            
+            const fd = new FormData();
+            fd.append('action', 'verify_jd');
+            fd.append('email', email);
+            fd.append('password', pwd);
+
+            const response = await fetch('setup_ajax.php', { method: 'POST', body: fd });
+            const data = await response.json();
+
             if (data.success) {
-                msg.className = "mb-3 text-center text-success-custom";
-                msg.innerHTML = '<i class="bi bi-check-circle"></i> Authentication Successful!';
                 msg.style.display = 'block';
+                msg.className = 'mb-3 text-center text-success-custom';
                 
-                setTimeout(() => {
-                    nextStep(4);
-                    // Reset button state in case user navigates back to this step
-                    btn.disabled = false;
-                    btn.innerHTML = 'Verify & Next <i class="bi bi-arrow-right"></i>';
-                }, 1000);
+                if (data.devices && data.devices.length > 0) {
+                    msg.innerHTML = '<i class="bi bi-check-circle"></i> Login successful! Select your instance below.';
+                    let selectHtml = `<select class="form-control" id="myjd_device" name="myjd_device" required>`;
+                    data.devices.forEach(dev => {
+                        selectHtml += `<option value="${dev}">${dev}</option>`;
+                    });
+                    selectHtml += `</select>`;
+                    wrapper.innerHTML = selectHtml;
+                } else {
+                    msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found! Please type it manually.';
+                    wrapper.innerHTML = `<input type="text" class="form-control" id="myjd_device" name="myjd_device" placeholder="e.g. JDownloader@anime-loads" required>`;
+                }
             } else {
-                msg.className = "mb-3 text-center text-danger-custom";
-                msg.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.error || "Authentication failed.");
                 msg.style.display = 'block';
-                btn.disabled = false;
-                btn.innerHTML = 'Verify & Next <i class="bi bi-arrow-right"></i>';
+                msg.className = 'mb-3 text-center text-danger-custom';
+                msg.innerHTML = '<i class="bi bi-x-circle"></i> Login Failed: ' + data.error;
             }
         } catch (e) {
-            msg.className = "mb-3 text-center text-warning-custom";
-            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Network error during verification.';
+            msg.className = "mb-3 text-center text-danger-custom";
+            msg.innerHTML = '<i class="bi bi-x-circle"></i> Network error during verification.';
             msg.style.display = 'block';
-            btn.disabled = false;
-            btn.innerHTML = 'Verify & Next <i class="bi bi-arrow-right"></i>';
         }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-download"></i> Login & Fetch Instances';
     }
 
     async function verifyPlex() {

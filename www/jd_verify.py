@@ -9,7 +9,13 @@ if len(sys.argv) != 3:
 jd = myjdapi.Myjdapi()
 try:
     if jd.connect(sys.argv[1], sys.argv[2]):
-        print(json.dumps({"success": True}))
+        devices = []
+        try:
+            jd.update_devices()
+            devices = [device.name for device in jd.list_devices()]
+        except Exception:
+            pass
+        print(json.dumps({"success": True, "devices": devices}))
         sys.exit(0)
     else:
         print(json.dumps({"success": False, "error": "Invalid credentials"}))

@@ -166,9 +166,14 @@ $additional_dirs = $config['additional_dirs'] ?? [];
                     <label class="form-label small">Password</label>
                     <input type="password" class="form-control form-control-sm" name="jd_password" id="jd_password" placeholder="(Leave blank to keep unchanged)">
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4 mb-3" id="myjd_device_container">
                     <label class="form-label small">Device Name</label>
-                    <input type="text" class="form-control form-control-sm" name="myjd_device" id="myjd_device" value="<?= htmlspecialchars($config['myjd_device'] ?? '') ?>">
+                    <div class="input-group input-group-sm">
+                        <div id="myjd_device_wrapper" style="flex: 1;">
+                            <input type="text" class="form-control form-control-sm w-100" name="myjd_device" id="myjd_device" value="<?= htmlspecialchars($config['myjd_device'] ?? '') ?>">
+                        </div>
+                        <button class="btn btn-outline-info" type="button" id="fetchJdBtn" onclick="fetchJdInstances()" title="Fetch Instances"><i class="bi bi-cloud-download"></i></button>
+                    </div>
                 </div>
             </div>
             <div class="mb-3">
@@ -298,46 +303,80 @@ $additional_dirs = $config['additional_dirs'] ?? [];
     }
 
     async function verifyJD() {
-        const email = document.getElementById('jd_email').value.trim();
-        const pass = document.getElementById('jd_password').value;
+        // Since we decoupled fetching from verification in setup, this can just verify the text/select is populated
+        const device = document.getElementById('myjd_device');
         const msg = document.getElementById('jd-validation-msg');
-        const btn = document.getElementById('verifyJdBtn');
+        
+        if (!device || !device.value.trim()) {
+            msg.className = "mb-3 text-danger-custom";
+            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Please provide a Device Name.';
+            msg.style.display = 'block';
+            return;
+        }
+        
+        msg.className = "mb-3 text-success-custom";
+        msg.innerHTML = '<i class="bi bi-check-circle"></i> Ready to save.';
+        msg.style.display = 'block';
+    }
 
-        if(!email || !pass) {
-            alert("Please enter JD email and password to verify. If you are keeping your password unchanged (left blank), please enter it just for this verification step.");
+    async function fetchJdInstances() {
+        const email = document.getElementById('jd_email').value.trim();
+        const pwd = document.getElementById('jd_password').value;
+        const msg = document.getElementById('jd-validation-msg');
+        const btn = document.getElementById('fetchJdBtn');
+        const wrapper = document.getElementById('myjd_device_wrapper');
+        const currentDevice = document.getElementById('myjd_device').value;
+        
+        if (!email) {
+            msg.style.display = 'block';
+            msg.className = 'mb-3 text-danger-custom';
+            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Please enter email first.';
             return;
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Verifying...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
         msg.style.display = 'none';
 
         try {
-            const formData = new FormData();
-            formData.append('action', 'verify_jd');
-            formData.append('email', email);
-            formData.append('password', pass);
-            
-            const res = await fetch('setup_ajax.php', { method: 'POST', body: formData });
-            const data = await res.json();
-            
+            const fd = new FormData();
+            fd.append('action', 'verify_jd');
+            fd.append('email', email);
+            fd.append('password', pwd);
+
+            const response = await fetch('setup_ajax.php', { method: 'POST', body: fd });
+            const data = await response.json();
+
             if (data.success) {
-                msg.className = "mb-3 text-success-custom";
-                msg.innerHTML = '<i class="bi bi-check-circle"></i> Authentication Successful!';
                 msg.style.display = 'block';
+                msg.className = 'mb-3 text-success-custom';
+                
+                if (data.devices && data.devices.length > 0) {
+                    msg.innerHTML = '<i class="bi bi-check-circle"></i> Instances fetched!';
+                    let selectHtml = `<select class="form-control form-control-sm w-100" id="myjd_device" name="myjd_device">`;
+                    data.devices.forEach(dev => {
+                        const sel = (dev === currentDevice) ? 'selected' : '';
+                        selectHtml += `<option value="${dev}" ${sel}>${dev}</option>`;
+                    });
+                    selectHtml += `</select>`;
+                    wrapper.innerHTML = selectHtml;
+                } else {
+                    msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Login successful, but no instances found! Please type it manually.';
+                    wrapper.innerHTML = `<input type="text" class="form-control form-control-sm w-100" id="myjd_device" name="myjd_device" value="${currentDevice}">`;
+                }
             } else {
-                msg.className = "mb-3 text-danger-custom";
-                msg.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.error || "Authentication Failed");
                 msg.style.display = 'block';
+                msg.className = 'mb-3 text-danger-custom';
+                msg.innerHTML = '<i class="bi bi-x-circle"></i> Fetch Failed: ' + data.error;
             }
         } catch (e) {
-            msg.className = "mb-3 text-warning-custom";
-            msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Network error during verification.';
+            msg.className = "mb-3 text-danger-custom";
+            msg.innerHTML = '<i class="bi bi-x-circle"></i> Network error during fetch.';
             msg.style.display = 'block';
         }
-        
+
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-shield-check"></i> Verify Credentials';
+        btn.innerHTML = '<i class="bi bi-cloud-download"></i>';
     }
 </script>
 </body>
