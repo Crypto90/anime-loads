@@ -1241,7 +1241,7 @@ if (($user == $conf_user && $pass == $conf_pass) || ($userGET == $conf_user && $
     </div>
 
     <div class="d-flex gap-2 ms-auto">
-        <a href="https://shieldserver.de" class="btn btn-surface btn-sm"><i class="bi bi-shield-check me-1"></i> Shieldserver</a>
+        <a href="test.php" class="btn btn-surface btn-sm"><i class="bi bi-activity me-1"></i> Diagnostics</a>
         <a href="settings.php" class="btn btn-surface btn-sm"><i class="bi bi-gear-fill me-1"></i> Settings</a>
         <a href="folder_manager.php?lang=ger" target="_blank" class="btn btn-surface btn-sm"><i class="bi bi-folder-symlink me-1"></i> Folder Manager</a>
         <a href="https://my.jdownloader.org/index.html?deviceId=dc69ebedb8e5d8a1bd2618dddbee1280#webinterface:downloads" target="_blank" class="btn btn-surface btn-sm"><i class="bi bi-cloud-arrow-down me-1"></i> MyJD API</a>
