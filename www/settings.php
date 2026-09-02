@@ -234,8 +234,10 @@ $additional_dirs = $config['additional_dirs'] ?? [];
 <div class="container">
     <div class="settings-card mx-auto">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="bi bi-gear-fill text-primary"></i> Settings</h2>
-            <a href="index.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-house"></i> Back to Home</a>
+            <div>
+                <a href="test.php" class="btn btn-outline-info btn-sm me-2"><i class="bi bi-activity"></i> Diagnostics</a>
+                <a href="index.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-house"></i> Back to Home</a>
+            </div>
         </div>
         
         <?php if(isset($success)): ?>
