@@ -132,7 +132,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'redownload_episode') {
         } else {
             $logFile = $base_dir . '/manualOutput.log';
             file_put_contents($logFile, "FORCE DOWNLOAD TRIGGERED: Episode {$ep} of {$title}...\nEs dauert etwa 60 Sekunden bis es weiter geht...\n");
-            $cmd = 'cd ".$base_dir.";PATH=/usr/local/bin:$PATH python3 -u download_anime.py ' . $titleEscaped . ' ' . $lang . ' ' . $res . ' 0 0 0 0 >> ' . escapeshellarg($logFile) . ' 2>&1 &';
+            $cmd = 'cd ' . escapeshellarg($base_dir) . ' && PATH=/usr/local/bin:$PATH python3 -u download_anime.py ' . $titleEscaped . ' ' . escapeshellarg($lang) . ' ' . escapeshellarg($res) . ' 0 0 0 0 >> ' . escapeshellarg($logFile) . ' 2>&1 &';
             liveExecuteCommand($cmd);
         }
     }
@@ -272,7 +272,7 @@ if (isset($_GET['processqueue']) && $_GET['processqueue'] != '') {
     	$DRYRUN = $firstLineParameterArray[6];
         
     	file_put_contents($base_dir . '/manualOutput.log', '');
-    	$result = liveExecuteCommand('cd ".$base_dir.";PATH=/usr/local/bin:$PATH python3 -u download_anime.py "' . $animeTitel . '" ' . $languageselect . ' ' . $resolutionselect . $forceAnimeResult . $forceAnimeRelease . $skipEpisodes . $DRYRUN . ' > ".$base_dir."/manualOutput.log 2>&1 &');
+    	$result = liveExecuteCommand('cd ' . escapeshellarg($base_dir) . ' && PATH=/usr/local/bin:$PATH python3 -u download_anime.py ' . escapeshellarg($animeTitel) . ' ' . escapeshellarg($languageselect) . ' ' . escapeshellarg($resolutionselect) . ' ' . escapeshellarg($forceAnimeResult) . ' ' . escapeshellarg($forceAnimeRelease) . ' ' . escapeshellarg($skipEpisodes) . ' ' . escapeshellarg($DRYRUN) . ' > ' . escapeshellarg($base_dir . '/manualOutput.log') . ' 2>&1 &');
 		
 		if (strpos($animeTitel, 'http') !== false) { $animeTitel = explode("/media/", $animeTitel)[1]; }
 		
